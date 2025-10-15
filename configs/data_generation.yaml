@@ -1,0 +1,10 @@
+sf_dummy:
+  N_min: 10
+  N_max: 15
+  resolution: 7  # Resolution of H3 hexagons (0.66 km2)
+  temporal_interval_minutes: 30
+  vehicle_speed_kmh: 20
+  min_distance_h3_units: 3
+  random_seed: null
+
+  

@@ -1,0 +1,10 @@
+or_tools:
+  vehicle_num: 8
+  depot_node: 0
+  vehicle_travel_speed: 20.0
+  time_window_duration: 30
+  vehicle_capacity: 10
+  max_solve_time: 0.1
+
+
+  
