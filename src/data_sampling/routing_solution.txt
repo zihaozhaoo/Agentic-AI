@@ -1,0 +1,18 @@
+Vehicle Routing Solution for Sampled NYC Taxi Requests
+================================================================================
+
+Status: FEASIBLE
+Total Cost: 475.64
+Routing Cost: 475.64
+Number of Vehicles Used: 7
+Solve Time: 30.01 seconds
+
+routes: {
+  vehicle_1: [4],
+  vehicle_2: [10, 5, 6, 16, 17],
+  vehicle_3: [2, 3, 18, 9, 19, 15, 12, 20],
+  vehicle_4: [8, 11],
+  vehicle_5: [7],
+  vehicle_6: [1],
+  vehicle_7: [14, 13],
+}

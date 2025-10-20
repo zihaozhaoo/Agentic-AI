@@ -1,0 +1,22 @@
+Dummy Agent Evaluation Results
+================================================================================
+
+Total Requests: 20
+Assigned Requests: 19
+Unassigned Requests: 1
+Vehicles Used: 9
+Total Routing Cost: 670.17 minutes
+
+Vehicle Assignments and Costs:
+--------------------------------------------------------------------------------
+Vehicle 1: Requests [2, 14, 20], Cost: 114.52 minutes
+Vehicle 2: Requests [1, 9, 15], Cost: 98.83 minutes
+Vehicle 3: Requests [6, 16], Cost: 77.93 minutes
+Vehicle 4: Requests [4], Cost: 16.32 minutes
+Vehicle 5: Requests [3, 5, 17], Cost: 91.98 minutes
+Vehicle 6: Requests [11, 13], Cost: 81.33 minutes
+Vehicle 8: Requests [12], Cost: 49.52 minutes
+Vehicle 9: Requests [8], Cost: 37.48 minutes
+Vehicle 10: Requests [10, 18, 19], Cost: 102.25 minutes
+
+Unassigned Request IDs: [7]

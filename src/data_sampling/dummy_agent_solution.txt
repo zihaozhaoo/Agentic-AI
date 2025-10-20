@@ -1,0 +1,21 @@
+Dummy Agent Solution for Sampled NYC Taxi Requests
+================================================================================
+
+Total Requests: 20
+Assigned: 19
+Unassigned: 1
+Vehicles Used: 9
+
+routes: {
+  vehicle_1: [2, 14, 20],
+  vehicle_2: [1, 9, 15],
+  vehicle_3: [6, 16],
+  vehicle_4: [4],
+  vehicle_5: [3, 5, 17],
+  vehicle_6: [11, 13],
+  vehicle_8: [12],
+  vehicle_9: [8],
+  vehicle_10: [10, 18, 19],
+}
+
+Unassigned Requests: [7]

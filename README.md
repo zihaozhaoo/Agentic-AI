@@ -13,15 +13,33 @@ Agentic-AI/
 │   ├── oracle.yaml            # OR-Tools求解器参数
 │   └── mdp_env.yaml           # (未使用，可能是未来的MDP环境配置)
 │
+├── dataset/                    # 数据集目录
+│   ├── records/               # NYC出租车记录
+│   │   └── green_tripdata_2025-01.parquet
+│   └── taxi_zones/            # NYC出租车区域shapefile
+│       └── taxi_zones.shp (+ related files)
+│
 ├── src/
-│   ├── data_gen/              # 数据生成模块
-│   │   ├── sf_dummy.py        # 生成虚拟打车请求
-│   │   ├── nodify.py          # 网络编码（H3→距离矩阵）
-│   │   └── sf_h3_indices_res7.csv  # 缓存的SF区域H3索引
+│   ├── data_sampling/         # 数据采样与处理模块
+│   │   ├── sample.py          # 从NYC数据集采样请求
+│   │   ├── process_samples_with_coordinates.py  # 添加坐标和时间窗口
+│   │   ├── distance_matrix.py # 生成travel time矩阵
+│   │   ├── sampled_requests_with_coords.csv    # 采样的20个请求
+│   │   ├── distance_matrix.npy                 # 41x41 travel time矩阵
+│   │   ├── distance_matrix.json                # 矩阵JSON格式
+│   │   ├── routing_solution.txt                # OR-Tools求解结果
+│   │   └── dummy_agent_evaluation.txt          # Dummy Agent评估结果
 │   │
 │   ├── solver/                # 路由求解模块
 │   │   ├── or_tools.py        # OR-Tools DARP求解器
+│   │   ├── solve_for_samples.py  # 对采样数据求解路由
 │   │   └── __main__.py        # 可执行入口
+│   │
+│   ├── white_agent/           # White Agent模块（被评估对象）
+│   │   └── dummy.py           # Dummy贪心调度算法
+│   │
+│   ├── green_agent/           # Green Agent模块（评估器）
+│   │   └── eval.py            # 评估White Agent性能
 │   │
 │   └── google_map/            # 外部API模块
 │       └── gmap.py            # Google Maps API查询距离
@@ -161,48 +179,198 @@ python gmap.py "Golden Gate Park, SF" "SFO Airport"
 
 ---
 
-## 🎯 当前代码的工作流程
+## 🎯 完整工作流程
+
+### Phase 1: 数据采样与预处理
 
 ```mermaid
 graph LR
-    A[configs/data_generation.yaml] --> B[sf_dummy.py]
-    B --> C[生成请求DataFrame]
-    C --> D[nodify.py]
-    D --> E[距离矩阵 + 编码请求]
-    F[configs/oracle.yaml] --> G[or_tools.py]
-    E --> G
-    G --> H[路由方案 + 成本]
+    A[NYC Taxi Dataset] --> B[sample.py]
+    B --> C[20 Random Requests]
+    C --> D[process_samples_with_coordinates.py]
+    E[Taxi Zones Shapefile] --> D
+    D --> F[sampled_requests_with_coords.csv]
+    F --> G[distance_matrix.py]
+    H[Google Maps API] --> G
+    G --> I[distance_matrix.npy]
 ```
 
-**执行示例：**
+**Step 1: 采样请求**
 ```bash
-python -m src.solver  # 运行完整流程
+cd dataset
+python process_samples_with_coordinates.py
 ```
 
 **输出：**
+- `sampled_requests_with_coords.csv` - 包含20个请求，每个请求有：
+  - `pickup_loc`: (纬度, 经度)
+  - `dropoff_loc`: (纬度, 经度)
+  - `pickup_time_window`: [start_timestamp, end_timestamp] (±5分钟)
+  - `dropoff_time_window`: [start_timestamp, end_timestamp] (±5分钟)
+  - `pickup_idx`: 原始LocationID (pickup)
+  - `dropoff_idx`: 原始LocationID (dropoff)
+
+**Step 2: 生成距离矩阵**
+```bash
+cd src/data_sampling
+python distance_matrix.py
 ```
-25  # 生成了25个请求
-{
- 'num_vehicles': 8,
- 'num_vehicles_used': 7,
- 'routing_cost': 156.78,
- 'routes': [[1, 3, 5, 7], [2, 4], ...],
- 'solve_time': 0.09,
- 'status': 'FEASIBLE',
- 'total_cost': 156.78,
- 'total_distance_km': 156.78
+
+**输出：**
+- `distance_matrix.npy` - 41×41矩阵，表示节点间travel time（分钟）
+- `distance_matrix.json` - JSON格式，包含节点信息
+
+**节点编码规则：**
+- Node 0: Depot（所有请求的平均经纬度）
+- Node 2k-1: Request k的pickup节点 (k=1,2,...,20)
+- Node 2k: Request k的dropoff节点
+
+---
+
+### Phase 2: 求解最优路由（OR-Tools）
+
+```mermaid
+graph LR
+    A[distance_matrix.npy] --> B[solve_for_samples.py]
+    C[sampled_requests_with_coords.csv] --> B
+    B --> D[OR-Tools Solver]
+    D --> E[routing_solution.txt]
+```
+
+**执行：**
+```bash
+cd src/solver
+python solve_for_samples.py
+```
+
+**输出示例：**
+```
+Status: FEASIBLE
+Total Cost: 475.64 minutes
+Vehicles Used: 7
+
+routes: {
+  vehicle_1: [4],
+  vehicle_2: [10, 5, 6, 16, 17],
+  vehicle_3: [2, 3, 18, 9, 19, 15, 12, 20],
+  vehicle_4: [8, 11],
+  vehicle_5: [7],
+  vehicle_6: [1],
+  vehicle_7: [14, 13],
 }
 ```
 
 ---
 
-## ⚠️ 当前代码库缺失的部分（Demo需要补充）
+### Phase 3: Dummy Agent调度
 
-1. **Green Agent评估逻辑** - 如何评分White Agent的输出
-2. **White Agent接口定义** - White Agent应该如何接收请求并返回结果
-3. **自然语言请求生成** - 目前只有结构化数据，没有NL版本
-4. **可视化界面** - 展示地图、路线、评分
-5. **司机状态管理** - 动态更新司机位置和可用性
+```mermaid
+graph LR
+    A[distance_matrix.npy] --> B[dummy.py]
+    C[sampled_requests_with_coords.csv] --> B
+    B --> D[Greedy Assignment]
+    D --> E[Vehicle Routes]
+```
+
+**执行：**
+```bash
+cd src/white_agent
+python dummy.py
+```
+
+**Dummy Agent算法：**
+1. 初始化10辆车，所有车在depot（node 0）
+2. 按顺序处理每个请求
+3. 对每个请求：
+   - 检查所有车辆的可行性（基于时间窗口和travel time）
+   - 从可行车辆中随机选择一辆
+   - 更新该车辆的位置和可用时间
+4. 输出每辆车分配到的请求列表
+
+**输出示例：**
+```
+Total Requests: 20
+Assigned: 19
+Unassigned: 1
+Vehicles Used: 9
+
+routes: {
+  vehicle_1: [2, 14, 20],
+  vehicle_2: [1, 9, 15],
+  vehicle_3: [6, 16],
+  vehicle_4: [4],
+  vehicle_5: [3, 5, 17],
+  vehicle_6: [11, 13],
+  vehicle_8: [12],
+  vehicle_9: [8],
+  vehicle_10: [10, 18, 19],
+}
+
+Unassigned Requests: [7]
+```
+
+---
+
+### Phase 4: Green Agent评估
+
+```mermaid
+graph LR
+    A[dummy.py] --> B[eval.py]
+    C[distance_matrix.npy] --> B
+    D[sampled_requests_with_coords.csv] --> B
+    B --> E[Cost Calculation]
+    E --> F[Performance Metrics]
+    F --> G[dummy_agent_evaluation.txt]
+```
+
+**执行：**
+```bash
+cd src/green_agent
+python eval.py
+```
+
+**评估指标：**
+1. **Total Routing Cost** - 所有车辆的总travel time（分钟）
+2. **Assignment Rate** - 成功分配的请求比例
+3. **Vehicles Used** - 实际使用的车辆数量
+4. **Cost per Vehicle** - 每辆车的路由成本明细
+5. **Gap vs Optimal** - 与OR-Tools最优解的差距
+
+**输出示例：**
+```
+Total Routing Cost: 670.17 minutes
+Assigned Requests: 19/20 (95%)
+Vehicles Used: 9
+
+Vehicle Breakdown:
+  Vehicle 1: [2, 14, 20] → 114.52 min
+  Vehicle 2: [1, 9, 15] → 98.83 min
+  ...
+
+--- Comparison with OR-Tools ---
+Dummy Agent Cost: 670.17 minutes
+OR-Tools Cost: 475.64 minutes
+Gap: +40.90%
+```
+
+---
+
+## ✅ 已实现功能
+
+1. ✅ **数据采样** - 从真实NYC taxi数据集采样请求
+2. ✅ **坐标计算** - 基于taxi zones shapefile计算区域中心点
+3. ✅ **距离矩阵生成** - 使用Google Maps API获取实际travel time
+4. ✅ **OR-Tools求解器** - 提供最优baseline方案
+5. ✅ **Dummy Agent** - 简单的贪心调度算法示例
+6. ✅ **Green Agent评估** - 计算routing cost并与最优解对比
+
+## 🔧 待补充功能（未来改进方向）
+
+1. **自然语言请求生成** - 目前只有结构化数据，没有NL版本
+2. **可视化界面** - 展示地图、路线、评分
+3. **动态调度** - 实时处理新请求的能力
+4. **多种评估指标** - 除了routing cost，还可以评估响应时间、公平性等
+5. **LLM-based White Agent** - 使用LLM直接理解请求并生成调度方案
 
 ---
 
@@ -220,17 +388,101 @@ python -m src.solver  # 运行完整流程
 
 ### 安装依赖
 ```bash
-pip install pandas numpy h3 geopy scipy ortools googlemaps pyyaml
+pip install pandas numpy h3 geopy scipy ortools googlemaps pyyaml geopandas
 ```
 
-### 运行示例
+### 完整运行流程
+
+#### 1. 数据准备（仅需运行一次）
 ```bash
-# 生成请求并求解路由
-python -m src.solver
+# Step 1: 从NYC数据集采样20个请求并添加坐标
+cd dataset
+python process_samples_with_coordinates.py
 
-# 查询Google Maps距离
-python src/google_map/gmap.py "起点地址" "终点地址"
+# Step 2: 生成travel time矩阵（需要Google Maps API）
+cd ../src/data_sampling
+python distance_matrix.py
 ```
+
+**注意：** `distance_matrix.py`会调用Google Maps API，可能需要几分钟并消耗API配额。
+
+#### 2. 运行OR-Tools最优求解器（Baseline）
+```bash
+cd ../solver
+python solve_for_samples.py
+```
+
+**输出：** `src/data_sampling/routing_solution.txt`
+- 最优路由方案
+- 最小化总travel time
+
+#### 3. 运行Dummy Agent（被评估对象）
+```bash
+cd ../white_agent
+python dummy.py
+```
+
+**输出：** `src/data_sampling/dummy_agent_solution.txt`
+- 贪心算法的路由方案
+- 可能有未分配的请求
+
+#### 4. 运行Green Agent评估
+```bash
+cd ../green_agent
+python eval.py
+```
+
+**输出：** `src/data_sampling/dummy_agent_evaluation.txt`
+- Dummy Agent的routing cost
+- 与OR-Tools的对比
+- 详细的每辆车成本breakdown
+
+### 一键运行完整流程
+```bash
+# 从项目根目录执行
+cd src/solver && python solve_for_samples.py
+cd ../white_agent && python dummy.py
+cd ../green_agent && python eval.py
+```
+
+---
+
+## 📊 实验结果对比
+
+### 测试场景
+- **数据集**: NYC Green Taxi (2025-01)
+- **请求数量**: 20个随机采样请求
+- **车辆数量**: 10辆
+- **节点数**: 41 (1 depot + 40 pickup/dropoff nodes)
+- **时间窗口**: 实际时间 ±5分钟
+
+### 性能对比
+
+| 指标 | OR-Tools (最优) | Dummy Agent (贪心) | 差距 |
+|------|----------------|-------------------|------|
+| **Total Cost** | 475.64 min | 670.17 min | +40.90% |
+| **Vehicles Used** | 7 | 9 | +28.57% |
+| **Requests Assigned** | 20/20 (100%) | 19/20 (95%) | -5% |
+| **Solve Time** | ~30 sec | <1 sec | - |
+
+### 关键发现
+
+1. **OR-Tools优势**:
+   - 找到全局最优解或接近最优解
+   - 100%请求分配率
+   - 更少的车辆使用量
+   - 更短的总travel time
+
+2. **Dummy Agent特点**:
+   - 极快的响应时间（适合实时场景）
+   - 简单易实现
+   - 但有40%的效率损失
+   - 可能无法分配所有请求
+
+3. **改进方向**:
+   - 考虑全局优化而非贪心选择
+   - 动态调整时间窗口
+   - 使用机器学习预测最优分配
 
 ---
 
