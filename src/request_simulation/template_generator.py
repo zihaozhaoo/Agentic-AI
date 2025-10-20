@@ -30,10 +30,20 @@ class TemplateGenerator:
         }
 
         # Time format variations
+        # Always include minutes for precision in ride-hailing context
+        import platform
+        self.use_dash_format = platform.system() != 'Windows'  # %-I doesn't work on Windows
+
         self.time_formats = [
             lambda dt: dt.strftime('%I:%M %p'),  # "3:30 PM"
-            lambda dt: dt.strftime('%I %p'),     # "3 PM"
-            lambda dt: dt.strftime('%H:%M'),     # "15:30"
+            lambda dt: dt.strftime('%I:%M %p').lstrip('0'),  # "3:30 PM" (no leading zero)
+            lambda dt: dt.strftime('%H:%M'),     # "15:30" (24-hour format)
+        ]
+
+        # Special format for times on the hour (11:00 → "11 PM")
+        self.time_formats_on_hour = [
+            lambda dt: dt.strftime('%I %p'),     # "03 PM"
+            lambda dt: dt.strftime('%I %p').lstrip('0'),  # "3 PM" (no leading zero)
         ]
 
         # Variations for request phrasing
@@ -72,7 +82,7 @@ class TemplateGenerator:
         ]
 
     def _format_time(self, dt) -> str:
-        """Format datetime in a random natural way."""
+        """Format datetime in a random natural way with precision."""
         import pandas as pd
 
         # Handle None or NaT
@@ -83,7 +93,15 @@ class TemplateGenerator:
         if hasattr(dt, 'to_pydatetime'):
             dt = dt.to_pydatetime()
 
-        formatter = random.choice(self.time_formats)
+        # Smart formatting: use "3 PM" only for times on the hour (3:00),
+        # otherwise always include minutes for precision (3:23 PM)
+        if dt.minute == 0 and dt.second == 0:
+            # On the hour - can omit minutes
+            formatter = random.choice(self.time_formats_on_hour)
+        else:
+            # Has minutes - must include for precision
+            formatter = random.choice(self.time_formats)
+
         return formatter(dt)
 
     def _get_location_reference(

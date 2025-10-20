@@ -176,8 +176,25 @@ class NYCTripDataPreprocessor:
             return df_time
 
         if 'request_datetime' in df_time.columns and 'pickup_datetime' in df_time.columns:
-            # Requested pickup time = request time (when they booked)
-            df_time['requested_pickup_time'] = df_time['request_datetime']
+            # Requested pickup time = close to actual pickup time (with small variation)
+            # Add -5 to +5 minute variation to make it realistic
+            df_time['pickup_time_variation'] = df_time.apply(
+                lambda _: random.randint(-5, 5), axis=1
+            )
+            df_time['requested_pickup_time'] = df_time.apply(
+                lambda row: row['pickup_datetime'] + timedelta(minutes=row['pickup_time_variation'])
+                if pd.notna(row['pickup_datetime']) else None,
+                axis=1
+            )
+
+            # Fallback: If requested_pickup_time is NaT, use raw pickup_datetime
+            df_time['requested_pickup_time'] = df_time.apply(
+                lambda row: row['pickup_datetime']
+                if (pd.isna(row['requested_pickup_time']) or row['requested_pickup_time'] is None) and
+                   pd.notna(row['pickup_datetime'])
+                else row['requested_pickup_time'],
+                axis=1
+            )
 
             # For some requests, generate a desired arrival time constraint
             # Based on the actual dropoff time with some randomization
@@ -187,15 +204,55 @@ class NYCTripDataPreprocessor:
                     lambda _: random.random() < 0.6, axis=1
                 )
 
-                # Calculate requested arrival time (slightly before actual to create urgency)
-                # Add 0-15 minutes buffer before actual dropoff
-                df_time['arrival_buffer_minutes'] = df_time.apply(
-                    lambda _: random.randint(-15, 5), axis=1
+                # Calculate actual trip duration first
+                df_time['actual_trip_duration_minutes'] = df_time['trip_time'] / 60
+
+                # Calculate requested arrival time
+                # Should be close to actual dropoff time, with variation
+                df_time['arrival_time_variation'] = df_time.apply(
+                    lambda _: random.randint(-10, 10), axis=1
                 )
 
                 df_time['requested_dropoff_time'] = df_time.apply(
-                    lambda row: row['dropoff_datetime'] + timedelta(minutes=row['arrival_buffer_minutes'])
+                    lambda row: row['dropoff_datetime'] + timedelta(minutes=row['arrival_time_variation'])
                     if row['has_arrival_constraint'] and pd.notna(row['dropoff_datetime']) else None,
+                    axis=1
+                )
+
+                # Calculate available time for trip (requested dropoff - requested pickup)
+                df_time['available_trip_time_minutes'] = df_time.apply(
+                    lambda row: (row['requested_dropoff_time'] - row['requested_pickup_time']).total_seconds() / 60
+                    if row['has_arrival_constraint'] and pd.notna(row['requested_dropoff_time'])
+                    and pd.notna(row['requested_pickup_time'])
+                    else None,
+                    axis=1
+                )
+
+                # IMPORTANT: If estimated duration > actual duration, adjust requested dropoff time
+                # This happens when routing takes longer than the actual trip (traffic, detours, etc.)
+                # We need to give customers enough time to actually complete the trip
+                df_time['estimated_duration_minutes'] = df_time.apply(
+                    lambda row: max(row['actual_trip_duration_minutes'], row.get('trip_time', 0) / 60),
+                    axis=1
+                )
+
+                # Adjust dropoff time if available time is less than needed
+                df_time['requested_dropoff_time'] = df_time.apply(
+                    lambda row: (row['requested_pickup_time'] +
+                                timedelta(minutes=row['estimated_duration_minutes'] + random.randint(5, 15)))
+                    if (row['has_arrival_constraint'] and pd.notna(row['requested_pickup_time']) and
+                        row['available_trip_time_minutes'] is not None and
+                        row['available_trip_time_minutes'] < row['actual_trip_duration_minutes'])
+                    else row.get('requested_dropoff_time'),
+                    axis=1
+                )
+
+                # Recalculate available time after adjustment
+                df_time['available_trip_time_minutes'] = df_time.apply(
+                    lambda row: (row['requested_dropoff_time'] - row['requested_pickup_time']).total_seconds() / 60
+                    if row['has_arrival_constraint'] and pd.notna(row['requested_dropoff_time'])
+                    and pd.notna(row['requested_pickup_time'])
+                    else None,
                     axis=1
                 )
 
@@ -214,23 +271,31 @@ class NYCTripDataPreprocessor:
                     axis=1
                 )
 
-                # Calculate actual available time for trip
-                df_time['available_trip_time_minutes'] = df_time.apply(
-                    lambda row: (row['requested_dropoff_time'] - row['requested_pickup_time']).total_seconds() / 60
-                    if row['has_arrival_constraint'] and row['requested_dropoff_time'] is not None
-                    and pd.notna(row['requested_dropoff_time']) and pd.notna(row['requested_pickup_time'])
-                    else None,
-                    axis=1
-                )
-
-                # Calculate actual trip duration for comparison
-                df_time['actual_trip_duration_minutes'] = df_time['trip_time'] / 60
-
                 # Is the time constraint tight? (available time < actual time + 10 min buffer)
                 df_time['is_tight_constraint'] = df_time.apply(
                     lambda row: row['has_arrival_constraint'] and
                     row['available_trip_time_minutes'] is not None and
                     row['available_trip_time_minutes'] < (row['actual_trip_duration_minutes'] + 10),
+                    axis=1
+                )
+
+                # Fallback: If requested_dropoff_time is NaT but we have arrival constraint,
+                # use the raw dropoff_datetime
+                df_time['requested_dropoff_time'] = df_time.apply(
+                    lambda row: row['dropoff_datetime']
+                    if (row['has_arrival_constraint'] and
+                        (pd.isna(row['requested_dropoff_time']) or row['requested_dropoff_time'] is None) and
+                        pd.notna(row['dropoff_datetime']))
+                    else row['requested_dropoff_time'],
+                    axis=1
+                )
+
+                # Recalculate available time one more time after fallback
+                df_time['available_trip_time_minutes'] = df_time.apply(
+                    lambda row: (row['requested_dropoff_time'] - row['requested_pickup_time']).total_seconds() / 60
+                    if row['has_arrival_constraint'] and pd.notna(row['requested_dropoff_time'])
+                    and pd.notna(row['requested_pickup_time'])
+                    else None,
                     axis=1
                 )
 
