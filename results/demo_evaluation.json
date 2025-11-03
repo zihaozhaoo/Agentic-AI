@@ -1,0 +1,65 @@
+{
+  "agent_name": "DemoAgent",
+  "evaluation_summary": {
+    "parsing_metrics": {
+      "total_requests": 10,
+      "origin_zone_accuracy": 1.0,
+      "destination_zone_accuracy": 1.0,
+      "time_constraint_accuracy": 1.0,
+      "special_requirements_accuracy": 1.0,
+      "mean_origin_error_miles": 0.0,
+      "mean_destination_error_miles": 0.0
+    },
+    "routing_metrics": {
+      "total_requests": 10,
+      "total_revenue": 99.07465611611416,
+      "total_idle_cost": 2.7148272088655734,
+      "net_revenue": 96.35982890724858,
+      "total_trip_miles": 28.600253326685,
+      "total_deadhead_miles": 5.429654417731147,
+      "deadhead_ratio": 0.15955536695870357,
+      "average_pickup_time_minutes": 1.3031170602554751,
+      "average_trip_time_minutes": 6.8640607984044,
+      "revenue_per_mile": 2.9113994918887482
+    },
+    "total_requests_evaluated": 10,
+    "overall_score": 36.7451880235074
+  },
+  "processed_requests": 10,
+  "successful_requests": 10,
+  "failed_requests": 0,
+  "vehicle_stats": {
+    "total_vehicles": 100,
+    "available_vehicles": 100,
+    "en_route_vehicles": 0,
+    "on_trip_vehicles": 0,
+    "offline_vehicles": 0,
+    "total_miles_driven": 34.02990774441615,
+    "total_deadhead_miles": 5.429654417731147,
+    "total_revenue": 99.07465611611414,
+    "deadhead_ratio": 0.15955536695870357
+  },
+  "simulator_stats": {
+    "total_requests_processed": 10,
+    "completed_trips": 10,
+    "active_trips": 0,
+    "total_deadhead_miles": 5.429654417731147,
+    "total_trip_miles": 28.600253326685,
+    "total_revenue": 99.07465611611414,
+    "deadhead_ratio": 0.15955536695870357
+  },
+  "logging_stats": {
+    "total_events": 52,
+    "event_counts": {
+      "EVALUATION_START": 1,
+      "REQUEST_ARRIVAL": 10,
+      "REQUEST_PARSED": 10,
+      "ROUTING_DECISION": 10,
+      "VEHICLE_ASSIGNMENT": 10,
+      "TRIP_COMPLETE": 10,
+      "EVALUATION_END": 1
+    },
+    "first_event": "2025-10-29T23:15:07.363769",
+    "last_event": "2025-10-29T23:15:07.376807"
+  }
+}

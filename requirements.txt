@@ -1,0 +1,29 @@
+# Core dependencies
+pandas>=2.0.0
+numpy>=1.24.0
+pyarrow>=12.0.0  # For parquet file support
+
+# Geospatial
+h3>=3.7.6
+geopy>=2.3.0
+
+# Google Maps API
+googlemaps>=4.10.0
+
+# LLM APIs
+openai>=1.0.0
+anthropic>=0.18.0
+
+# OR-Tools (routing solver)
+ortools>=9.6.0
+
+# Configuration
+pyyaml>=6.0
+
+# Optimization (optional)
+scipy>=1.10.0
+
+# Development dependencies (optional)
+jupyter>=1.0.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
