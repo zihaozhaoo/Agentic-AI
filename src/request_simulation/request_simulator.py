@@ -137,7 +137,8 @@ class RequestSimulator:
             'request_time': trip_row.get('request_datetime', datetime.now()),
             'trip_miles': trip_row.get('trip_miles', 0),
             'trip_time': trip_row.get('trip_time', 0),
-            'passenger_count': trip_row.get('base_passenger_fare', 1),
+            # Use actual passenger count if available; otherwise default to 1
+            'passenger_count': trip_row.get('passenger_count', 1),
             'wav_request_flag': trip_row.get('wav_request_flag', 'N'),
             'shared_request_flag': trip_row.get('shared_request_flag', 'N'),
 
@@ -362,19 +363,21 @@ class RequestSimulator:
 def main():
     """Example usage of request simulator."""
 
-    # Configuration
-    taxi_zone_lookup = "/home/hengyu/CS294-Agentic-AI/Agentic-AI/taxi_zone_lookup.csv"
-    parquet_file = "/home/hengyu/CS294-Agentic-AI/fhvhv_tripdata_2025-01.parquet"
+    # Configuration: assume running inside the project checkout
+    project_root = Path(__file__).resolve().parent.parent.parent
+    taxi_zone_lookup = project_root / "taxi_zone_lookup.csv"
+    # Keep the large parquet file one level above the repo by default
+    parquet_file = project_root.parent / "fhvhv_tripdata_2025-01.parquet"
 
     # Initialize simulator
     simulator = RequestSimulator(
-        taxi_zone_lookup_path=taxi_zone_lookup,
+        taxi_zone_lookup_path=str(taxi_zone_lookup),
         llm_provider="openai",  # or "anthropic"
         template_ratio=0.5  # 50% template, 50% LLM
     )
 
     # Load and preprocess data
-    df = simulator.load_and_preprocess_data(parquet_file, sample_size=1000)
+    df = simulator.load_and_preprocess_data(str(parquet_file), sample_size=1000)
 
     # Generate customer profiles
     print("Generating customer profiles...")

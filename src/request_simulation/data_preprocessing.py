@@ -397,16 +397,18 @@ class NYCTripDataPreprocessor:
 
 def main():
     """Example usage of the preprocessor."""
-    # Paths
-    taxi_zone_lookup = "/home/hengyu/CS294-Agentic-AI/Agentic-AI/taxi_zone_lookup.csv"
-    parquet_file = "/home/hengyu/CS294-Agentic-AI/fhvhv_tripdata_2025-01.parquet"
+    # Paths (assume running from project checkout)
+    project_root = Path(__file__).resolve().parent.parent.parent
+    taxi_zone_lookup = project_root / "taxi_zone_lookup.csv"
+    # By default we keep the large parquet file one level above the repo
+    parquet_file = project_root.parent / "fhvhv_tripdata_2025-01.parquet"
 
     # Initialize preprocessor
-    preprocessor = NYCTripDataPreprocessor(taxi_zone_lookup)
+    preprocessor = NYCTripDataPreprocessor(str(taxi_zone_lookup))
 
     # Run preprocessing pipeline (sample 10000 for testing)
     df = preprocessor.preprocess_pipeline(
-        parquet_file,
+        str(parquet_file),
         sample_size=10000,
         save_dir="data/processed"
     )

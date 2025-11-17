@@ -1,9 +1,11 @@
-import pprint
-import yaml
 import os
-from solver.or_tools import cost_estimator
-from data_gen.sf_dummy import simulation
-from data_gen.nodify import create_network
+import pprint
+
+import yaml
+
+from .or_tools import cost_estimator
+from ..data_gen.sf_dummy import simulation
+from ..data_gen.nodify import create_network
 
 # Configure Parameters
 config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'configs', 'data_generation.yaml'))
