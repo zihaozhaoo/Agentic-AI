@@ -1,6 +1,6 @@
 [
   {
-    "timestamp": "2025-10-29T23:15:07.363769",
+    "timestamp": "2025-11-17T10:45:25.681088",
     "event_type": "EVALUATION_START",
     "event_data": {
       "agent_name": "DemoAgent",
@@ -10,17 +10,17 @@
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.365115",
+    "timestamp": "2025-11-17T10:45:25.683058",
     "event_type": "REQUEST_ARRIVAL",
     "event_data": {
       "request_id": "0",
       "request_time": "2025-01-05T11:33:26",
-      "natural_language_text": "I'd like a car destination Little Italy/NoLiTa from my apartment at 11:30 AM",
+      "natural_language_text": "I need to book an Uber starting from work to Little Italy/NoLiTa at 11:32 AM, need to arrive by 12:03 PM",
       "has_ground_truth": true
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.365519",
+    "timestamp": "2025-11-17T10:45:25.683555",
     "event_type": "REQUEST_PARSED",
     "event_data": {
       "request_id": "0",
@@ -28,100 +28,100 @@
         "request_id": "0",
         "request_time": "2025-01-05T11:33:26",
         "origin": {
-          "latitude": 40.75059006718256,
-          "longitude": -73.98260657126671,
+          "latitude": 40.767953066453586,
+          "longitude": -73.9928376708657,
           "zone_id": 163,
           "zone_name": "Midtown North",
           "address": null,
-          "poi_name": "Central Park"
+          "poi_name": "Midtown North"
         },
         "destination": {
-          "latitude": 40.75954101847299,
-          "longitude": -73.99031878657385,
+          "latitude": 40.76416997930694,
+          "longitude": -73.98078782715872,
           "zone_id": 144,
           "zone_name": "Little Italy/NoLiTa",
           "address": null,
           "poi_name": "Little Italy/NoLiTa"
         },
-        "requested_pickup_time": "2025-01-05T11:30:58",
-        "requested_dropoff_time": "2025-01-05T11:53:18",
+        "requested_pickup_time": "2025-01-05T11:32:58",
+        "requested_dropoff_time": "2025-01-05T12:03:18",
         "pickup_time_window_minutes": null,
         "dropoff_time_window_minutes": null,
         "has_arrival_constraint": true,
-        "passenger_count": 27.2,
+        "passenger_count": 1,
         "wheelchair_accessible": false,
         "shared_ride_ok": false,
         "luggage_count": 0,
-        "customer_id": "CUST_000195",
+        "customer_id": "CUST_000015",
         "priority": "normal",
         "additional_notes": null
       },
-      "parsing_time_ms": 0.2772808074951172,
+      "parsing_time_ms": 0.12063980102539062,
       "parsing_accuracy": null
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.365653",
+    "timestamp": "2025-11-17T10:45:25.683951",
     "event_type": "ROUTING_DECISION",
     "event_data": {
       "request_id": "0",
       "routing_decision": {
         "request_id": "0",
-        "vehicle_id": "V000022",
+        "vehicle_id": "V000091",
         "estimated_pickup_time": "2025-01-05T11:33:26",
         "estimated_dropoff_time": "2025-01-05T11:33:26",
-        "estimated_pickup_distance_miles": 0.3150863365218655,
-        "estimated_trip_distance_miles": 0.8152454213198956,
+        "estimated_pickup_distance_miles": 0.38731552902867583,
+        "estimated_trip_distance_miles": 0.8714524677093634,
         "waypoints": [],
-        "decision_rationale": "Dummy: assigned nearest vehicle V000022"
+        "decision_rationale": "Dummy: assigned nearest vehicle V000091"
       },
-      "decision_time_ms": 0.2772808074951172,
+      "decision_time_ms": 0.12063980102539062,
       "available_vehicles_count": 100
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.365734",
+    "timestamp": "2025-11-17T10:45:25.684328",
     "event_type": "VEHICLE_ASSIGNMENT",
     "event_data": {
-      "vehicle_id": "V000022",
+      "vehicle_id": "V000091",
       "request_id": "0",
       "current_location": {
-        "latitude": 40.752180412961096,
-        "longitude": -73.98688715956655
+        "latitude": 40.76245703966813,
+        "longitude": -73.99169641136933
       },
       "pickup_location": {
-        "latitude": 40.75059006718256,
-        "longitude": -73.98260657126671
+        "latitude": 40.767953066453586,
+        "longitude": -73.9928376708657
       },
-      "estimated_pickup_distance_miles": 0.3150863365218655,
+      "estimated_pickup_distance_miles": 0.38731552902867583,
       "estimated_pickup_time_minutes": 0.0
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.365869",
+    "timestamp": "2025-11-17T10:45:25.684742",
     "event_type": "TRIP_COMPLETE",
     "event_data": {
-      "vehicle_id": "V000022",
+      "vehicle_id": "V000091",
       "request_id": "0",
-      "trip_distance_miles": 0.7385661904451427,
-      "trip_time_minutes": 1.7725588570683424,
-      "fare": 4.412886433252919,
-      "deadhead_miles": 0.24956253085509983,
-      "net_revenue": 4.288105167825369
+      "trip_distance_miles": 0.6826398230675407,
+      "trip_time_minutes": 1.6383355753620976,
+      "fare": 4.26803714174493,
+      "deadhead_miles": 0.3844302011574409,
+      "net_revenue": 4.07582204116621
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.366645",
+    "timestamp": "2025-11-17T10:45:25.685714",
     "event_type": "REQUEST_ARRIVAL",
     "event_data": {
       "request_id": "1",
       "request_time": "2025-01-16T22:52:08",
-      "natural_language_text": "Take me from Marine Park/Mill Basin to Outside of NYC",
+      "natural_language_text": "I need to go from work to Outside of NYC",
       "has_ground_truth": true
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.366924",
+    "timestamp": "2025-11-17T10:45:25.686263",
     "event_type": "REQUEST_PARSED",
     "event_data": {
       "request_id": "1",
@@ -129,100 +129,100 @@
         "request_id": "1",
         "request_time": "2025-01-16T22:52:08",
         "origin": {
-          "latitude": 40.68071137967287,
-          "longitude": -73.93706458840178,
+          "latitude": 40.682067422415706,
+          "longitude": -73.93836494896112,
           "zone_id": 155,
           "zone_name": "Marine Park/Mill Basin",
           "address": null,
           "poi_name": "Marine Park/Mill Basin"
         },
         "destination": {
-          "latitude": 40.76779813412577,
-          "longitude": -73.97518169034232,
+          "latitude": 40.76760136815231,
+          "longitude": -73.9859150604083,
           "zone_id": 265,
           "zone_name": "Outside of NYC",
           "address": null,
           "poi_name": "Outside of NYC"
         },
-        "requested_pickup_time": "2025-01-16T22:56:59",
-        "requested_dropoff_time": "NaT",
+        "requested_pickup_time": "2025-01-16T22:58:59",
+        "requested_dropoff_time": "2025-01-16T23:43:40",
         "pickup_time_window_minutes": null,
         "dropoff_time_window_minutes": null,
-        "has_arrival_constraint": false,
-        "passenger_count": 53.35,
+        "has_arrival_constraint": true,
+        "passenger_count": 1,
         "wheelchair_accessible": false,
         "shared_ride_ok": false,
         "luggage_count": 0,
-        "customer_id": null,
+        "customer_id": "CUST_000030",
         "priority": "normal",
         "additional_notes": null
       },
-      "parsing_time_ms": 0.16880035400390625,
+      "parsing_time_ms": 0.13637542724609375,
       "parsing_accuracy": null
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.367032",
+    "timestamp": "2025-11-17T10:45:25.686647",
     "event_type": "ROUTING_DECISION",
     "event_data": {
       "request_id": "1",
       "routing_decision": {
         "request_id": "1",
-        "vehicle_id": "V000017",
+        "vehicle_id": "V000040",
         "estimated_pickup_time": "2025-01-16T22:52:08",
         "estimated_dropoff_time": "2025-01-16T22:52:08",
-        "estimated_pickup_distance_miles": 1.0794579630290162,
-        "estimated_trip_distance_miles": 6.559362348653278,
+        "estimated_pickup_distance_miles": 0.9536460830193841,
+        "estimated_trip_distance_miles": 6.752512523148203,
         "waypoints": [],
-        "decision_rationale": "Dummy: assigned nearest vehicle V000017"
+        "decision_rationale": "Dummy: assigned nearest vehicle V000040"
       },
-      "decision_time_ms": 0.16880035400390625,
+      "decision_time_ms": 0.13637542724609375,
       "available_vehicles_count": 100
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.367110",
+    "timestamp": "2025-11-17T10:45:25.687032",
     "event_type": "VEHICLE_ASSIGNMENT",
     "event_data": {
-      "vehicle_id": "V000017",
+      "vehicle_id": "V000040",
       "request_id": "1",
       "current_location": {
-        "latitude": 40.666353352441256,
-        "longitude": -73.9308523626141
+        "latitude": 40.66904626320188,
+        "longitude": -73.94299833704784
       },
       "pickup_location": {
-        "latitude": 40.68071137967287,
-        "longitude": -73.93706458840178
+        "latitude": 40.682067422415706,
+        "longitude": -73.93836494896112
       },
-      "estimated_pickup_distance_miles": 1.0794579630290162,
+      "estimated_pickup_distance_miles": 0.9536460830193841,
       "estimated_pickup_time_minutes": 0.0
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.367206",
+    "timestamp": "2025-11-17T10:45:25.687416",
     "event_type": "TRIP_COMPLETE",
     "event_data": {
-      "vehicle_id": "V000017",
+      "vehicle_id": "V000040",
       "request_id": "1",
-      "trip_distance_miles": 6.339898964845001,
-      "trip_time_minutes": 15.215757515628,
-      "fare": 18.920338318948552,
-      "deadhead_miles": 1.0441554199513312,
-      "net_revenue": 18.398260608972887
+      "trip_distance_miles": 6.413299436384788,
+      "trip_time_minutes": 15.391918647323491,
+      "fare": 19.1104455402366,
+      "deadhead_miles": 0.9319184883107845,
+      "net_revenue": 18.644486296081208
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.367901",
+    "timestamp": "2025-11-17T10:45:25.688488",
     "event_type": "REQUEST_ARRIVAL",
     "event_data": {
       "request_id": "2",
       "request_time": "2025-01-19T23:09:59",
-      "natural_language_text": "Take me from Gowanus to Bay Ridge",
+      "natural_language_text": "I'd like a car at 11:29 PM pickup at Gowanus to Bay Ridge, need to arrive by 23:49",
       "has_ground_truth": true
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.368117",
+    "timestamp": "2025-11-17T10:45:25.688992",
     "event_type": "REQUEST_PARSED",
     "event_data": {
       "request_id": "2",
@@ -230,27 +230,27 @@
         "request_id": "2",
         "request_time": "2025-01-19T23:09:59",
         "origin": {
-          "latitude": 40.68395691617627,
-          "longitude": -73.94130581037602,
+          "latitude": 40.670949718033235,
+          "longitude": -73.94578651723712,
           "zone_id": 106,
           "zone_name": "Gowanus",
           "address": null,
           "poi_name": "Gowanus"
         },
         "destination": {
-          "latitude": 40.6772047144989,
-          "longitude": -73.9517204928535,
+          "latitude": 40.676935699092,
+          "longitude": -73.94320614782049,
           "zone_id": 14,
           "zone_name": "Bay Ridge",
           "address": null,
           "poi_name": "Bay Ridge"
         },
-        "requested_pickup_time": "2025-01-19T23:27:09",
-        "requested_dropoff_time": "NaT",
+        "requested_pickup_time": "2025-01-19T23:29:09",
+        "requested_dropoff_time": "2025-01-19T23:49:19",
         "pickup_time_window_minutes": null,
         "dropoff_time_window_minutes": null,
-        "has_arrival_constraint": false,
-        "passenger_count": 18.74,
+        "has_arrival_constraint": true,
+        "passenger_count": 1,
         "wheelchair_accessible": false,
         "shared_ride_ok": false,
         "luggage_count": 0,
@@ -258,72 +258,72 @@
         "priority": "normal",
         "additional_notes": null
       },
-      "parsing_time_ms": 0.13303756713867188,
+      "parsing_time_ms": 0.07390975952148438,
       "parsing_accuracy": null
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.368221",
+    "timestamp": "2025-11-17T10:45:25.689380",
     "event_type": "ROUTING_DECISION",
     "event_data": {
       "request_id": "2",
       "routing_decision": {
         "request_id": "2",
-        "vehicle_id": "V000015",
+        "vehicle_id": "V000051",
         "estimated_pickup_time": "2025-01-19T23:09:59",
         "estimated_dropoff_time": "2025-01-19T23:09:59",
-        "estimated_pickup_distance_miles": 1.2851616528093077,
-        "estimated_trip_distance_miles": 0.8564282629429989,
+        "estimated_pickup_distance_miles": 0.274539494154607,
+        "estimated_trip_distance_miles": 0.4497735007218031,
         "waypoints": [],
-        "decision_rationale": "Dummy: assigned nearest vehicle V000015"
+        "decision_rationale": "Dummy: assigned nearest vehicle V000051"
       },
-      "decision_time_ms": 0.13303756713867188,
+      "decision_time_ms": 0.07390975952148438,
       "available_vehicles_count": 100
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.368276",
+    "timestamp": "2025-11-17T10:45:25.689762",
     "event_type": "VEHICLE_ASSIGNMENT",
     "event_data": {
-      "vehicle_id": "V000015",
+      "vehicle_id": "V000051",
       "request_id": "2",
       "current_location": {
-        "latitude": 40.666655538970296,
-        "longitude": -73.94820311124403
+        "latitude": 40.66775193361499,
+        "longitude": -73.94815406635693
       },
       "pickup_location": {
-        "latitude": 40.68395691617627,
-        "longitude": -73.94130581037602
+        "latitude": 40.670949718033235,
+        "longitude": -73.94578651723712
       },
-      "estimated_pickup_distance_miles": 1.2851616528093077,
+      "estimated_pickup_distance_miles": 0.274539494154607,
       "estimated_pickup_time_minutes": 0.0
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.368354",
+    "timestamp": "2025-11-17T10:45:25.690227",
     "event_type": "TRIP_COMPLETE",
     "event_data": {
-      "vehicle_id": "V000015",
+      "vehicle_id": "V000051",
       "request_id": "2",
-      "trip_distance_miles": 0.7179870878264181,
-      "trip_time_minutes": 1.7231690107834035,
-      "fare": 4.359586557470423,
-      "deadhead_miles": 1.24893040776662,
-      "net_revenue": 3.735121353587113
+      "trip_distance_miles": 0.4351608922157026,
+      "trip_time_minutes": 1.0443861413176863,
+      "fare": 3.6270667108386694,
+      "deadhead_miles": 0.2534151316425839,
+      "net_revenue": 3.500359145017377
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.369023",
+    "timestamp": "2025-11-17T10:45:25.691153",
     "event_type": "REQUEST_ARRIVAL",
     "event_data": {
       "request_id": "3",
       "request_time": "2025-01-23T10:50:08",
-      "natural_language_text": "Book me a ride: Ozone Park to Forest Hills, 17.85 passengers, arrive by 11:06 AM",
+      "natural_language_text": "I'm at my place and need to get to Forest Hills",
       "has_ground_truth": true
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.369244",
+    "timestamp": "2025-11-17T10:45:25.691568",
     "event_type": "REQUEST_PARSED",
     "event_data": {
       "request_id": "3",
@@ -331,100 +331,100 @@
         "request_id": "3",
         "request_time": "2025-01-23T10:50:08",
         "origin": {
-          "latitude": 40.7215352203154,
-          "longitude": -73.79127257588154,
+          "latitude": 40.73599953661379,
+          "longitude": -73.7991714613865,
           "zone_id": 180,
           "zone_name": "Ozone Park",
           "address": null,
           "poi_name": "Ozone Park"
         },
         "destination": {
-          "latitude": 40.726670396359694,
-          "longitude": -73.80129471917404,
+          "latitude": 40.73144883601458,
+          "longitude": -73.80213362163789,
           "zone_id": 95,
           "zone_name": "Forest Hills",
           "address": null,
-          "poi_name": "JFK"
+          "poi_name": "Forest Hills"
         },
-        "requested_pickup_time": "2025-01-23T10:48:50",
-        "requested_dropoff_time": "NaT",
+        "requested_pickup_time": "2025-01-23T10:51:50",
+        "requested_dropoff_time": "2025-01-23T11:23:11",
         "pickup_time_window_minutes": null,
         "dropoff_time_window_minutes": null,
-        "has_arrival_constraint": false,
-        "passenger_count": 17.85,
+        "has_arrival_constraint": true,
+        "passenger_count": 1,
         "wheelchair_accessible": false,
         "shared_ride_ok": false,
         "luggage_count": 0,
-        "customer_id": "CUST_000005",
+        "customer_id": "CUST_000029",
         "priority": "normal",
         "additional_notes": null
       },
-      "parsing_time_ms": 0.12969970703125,
+      "parsing_time_ms": 0.07081031799316406,
       "parsing_accuracy": null
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.369350",
+    "timestamp": "2025-11-17T10:45:25.691935",
     "event_type": "ROUTING_DECISION",
     "event_data": {
       "request_id": "3",
       "routing_decision": {
         "request_id": "3",
-        "vehicle_id": "V000060",
+        "vehicle_id": "V000064",
         "estimated_pickup_time": "2025-01-23T10:50:08",
         "estimated_dropoff_time": "2025-01-23T10:50:08",
-        "estimated_pickup_distance_miles": 0.05750254207154448,
-        "estimated_trip_distance_miles": 0.7770190125680608,
+        "estimated_pickup_distance_miles": 0.34393084236861937,
+        "estimated_trip_distance_miles": 0.37465963904639565,
         "waypoints": [],
-        "decision_rationale": "Dummy: assigned nearest vehicle V000060"
+        "decision_rationale": "Dummy: assigned nearest vehicle V000064"
       },
-      "decision_time_ms": 0.12969970703125,
+      "decision_time_ms": 0.07081031799316406,
       "available_vehicles_count": 100
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.369408",
+    "timestamp": "2025-11-17T10:45:25.692302",
     "event_type": "VEHICLE_ASSIGNMENT",
     "event_data": {
-      "vehicle_id": "V000060",
+      "vehicle_id": "V000064",
       "request_id": "3",
       "current_location": {
-        "latitude": 40.72196986374927,
-        "longitude": -73.79056152670329
+        "latitude": 40.731614186652656,
+        "longitude": -73.80154084852947
       },
       "pickup_location": {
-        "latitude": 40.7215352203154,
-        "longitude": -73.79127257588154
+        "latitude": 40.73599953661379,
+        "longitude": -73.7991714613865
       },
-      "estimated_pickup_distance_miles": 0.05750254207154448,
+      "estimated_pickup_distance_miles": 0.34393084236861937,
       "estimated_pickup_time_minutes": 0.0
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.369515",
+    "timestamp": "2025-11-17T10:45:25.692661",
     "event_type": "TRIP_COMPLETE",
     "event_data": {
-      "vehicle_id": "V000060",
+      "vehicle_id": "V000064",
       "request_id": "3",
-      "trip_distance_miles": 0.633515379899722,
-      "trip_time_minutes": 1.5204369117593326,
-      "fare": 4.14080483394028,
-      "deadhead_miles": 0.04783841130487448,
-      "net_revenue": 4.116885628287842
+      "trip_distance_miles": 0.35061156839440943,
+      "trip_time_minutes": 0.8414677641465826,
+      "fare": 3.4080839621415207,
+      "deadhead_miles": 0.327428965377129,
+      "net_revenue": 3.2443694794529563
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.370204",
+    "timestamp": "2025-11-17T10:45:25.693573",
     "event_type": "REQUEST_ARRIVAL",
     "event_data": {
       "request_id": "4",
       "request_time": "2025-01-19T01:35:56",
-      "natural_language_text": "I'm running late - I need to arrive at East Flatbush/Remsen Village by 01:56 AM for an appointment",
+      "natural_language_text": "I need a ride from Northside Williamsburg to North Williamsburg. arrive by 01:38 AM",
       "has_ground_truth": true
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.370435",
+    "timestamp": "2025-11-17T10:45:25.693984",
     "event_type": "REQUEST_PARSED",
     "event_data": {
       "request_id": "4",
@@ -432,27 +432,27 @@
         "request_id": "4",
         "request_time": "2025-01-19T01:35:56",
         "origin": {
-          "latitude": 40.677771280583165,
-          "longitude": -73.93663423392987,
+          "latitude": 40.6755150408028,
+          "longitude": -73.93422742292549,
           "zone_id": 91,
           "zone_name": "Flatlands",
           "address": null,
-          "poi_name": "Flatlands"
+          "poi_name": "Northside Williamsburg"
         },
         "destination": {
-          "latitude": 40.6792849353093,
-          "longitude": -73.95412095619243,
+          "latitude": 40.67375076122961,
+          "longitude": -73.9504091131532,
           "zone_id": 72,
           "zone_name": "East Flatbush/Remsen Village",
           "address": null,
-          "poi_name": "East Flatbush/Remsen Village"
+          "poi_name": "North Williamsburg"
         },
-        "requested_pickup_time": "2025-01-19T01:44:22",
-        "requested_dropoff_time": "2025-01-19T01:56:21",
+        "requested_pickup_time": "2025-01-19T01:43:22",
+        "requested_dropoff_time": "2025-01-19T01:54:21",
         "pickup_time_window_minutes": null,
         "dropoff_time_window_minutes": null,
         "has_arrival_constraint": true,
-        "passenger_count": 8.06,
+        "passenger_count": 1,
         "wheelchair_accessible": false,
         "shared_ride_ok": false,
         "luggage_count": 0,
@@ -460,72 +460,72 @@
         "priority": "normal",
         "additional_notes": null
       },
-      "parsing_time_ms": 0.1308917999267578,
+      "parsing_time_ms": 0.06079673767089844,
       "parsing_accuracy": null
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.370543",
+    "timestamp": "2025-11-17T10:45:25.694327",
     "event_type": "ROUTING_DECISION",
     "event_data": {
       "request_id": "4",
       "routing_decision": {
         "request_id": "4",
-        "vehicle_id": "V000015",
+        "vehicle_id": "V000051",
         "estimated_pickup_time": "2025-01-19T01:35:56",
         "estimated_dropoff_time": "2025-01-19T01:35:56",
-        "estimated_pickup_distance_miles": 1.0416856791247355,
-        "estimated_trip_distance_miles": 1.2110956699316646,
+        "estimated_pickup_distance_miles": 0.6272391125983204,
+        "estimated_trip_distance_miles": 1.123153381120203,
         "waypoints": [],
-        "decision_rationale": "Dummy: assigned nearest vehicle V000015"
+        "decision_rationale": "Dummy: assigned nearest vehicle V000051"
       },
-      "decision_time_ms": 0.1308917999267578,
+      "decision_time_ms": 0.06079673767089844,
       "available_vehicles_count": 100
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.370599",
+    "timestamp": "2025-11-17T10:45:25.694657",
     "event_type": "VEHICLE_ASSIGNMENT",
     "event_data": {
-      "vehicle_id": "V000015",
+      "vehicle_id": "V000051",
       "request_id": "4",
       "current_location": {
-        "latitude": 40.6772047144989,
-        "longitude": -73.9517204928535
+        "latitude": 40.676935699092,
+        "longitude": -73.94320614782049
       },
       "pickup_location": {
-        "latitude": 40.677771280583165,
-        "longitude": -73.93663423392987
+        "latitude": 40.6755150408028,
+        "longitude": -73.93422742292549
       },
-      "estimated_pickup_distance_miles": 1.0416856791247355,
+      "estimated_pickup_distance_miles": 0.6272391125983204,
       "estimated_pickup_time_minutes": 0.0
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.370687",
+    "timestamp": "2025-11-17T10:45:25.694995",
     "event_type": "TRIP_COMPLETE",
     "event_data": {
-      "vehicle_id": "V000015",
+      "vehicle_id": "V000051",
       "request_id": "4",
-      "trip_distance_miles": 0.9222911156274657,
-      "trip_time_minutes": 2.2134986775059176,
-      "fare": 4.888733989475136,
-      "deadhead_miles": 0.7915332047716134,
-      "net_revenue": 4.492967387089329
+      "trip_distance_miles": 0.8567224193523807,
+      "trip_time_minutes": 2.0561338064457138,
+      "fare": 4.718911066122666,
+      "deadhead_miles": 0.48065144793479403,
+      "net_revenue": 4.478585342155269
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.371436",
+    "timestamp": "2025-11-17T10:45:25.695825",
     "event_type": "REQUEST_ARRIVAL",
     "event_data": {
       "request_id": "5",
       "request_time": "2025-01-04T08:06:33",
-      "natural_language_text": "Take me from Morrisania/Melrose to Manhattan Valley",
+      "natural_language_text": "I need a ride from Morrisania/Melrose to Manhattan Valley, must arrive by 8:49 AM for an appointment",
       "has_ground_truth": true
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.371676",
+    "timestamp": "2025-11-17T10:45:25.696223",
     "event_type": "REQUEST_PARSED",
     "event_data": {
       "request_id": "5",
@@ -533,100 +533,100 @@
         "request_id": "5",
         "request_time": "2025-01-04T08:06:33",
         "origin": {
-          "latitude": 40.84906368254132,
-          "longitude": -73.87024865149974,
+          "latitude": 40.849036452944674,
+          "longitude": -73.86907404736101,
           "zone_id": 167,
           "zone_name": "Morrisania/Melrose",
           "address": null,
           "poi_name": "Morrisania/Melrose"
         },
         "destination": {
-          "latitude": 40.74988081861004,
-          "longitude": -73.98823682746509,
+          "latitude": 40.765229205675006,
+          "longitude": -73.98870740144665,
           "zone_id": 151,
           "zone_name": "Manhattan Valley",
           "address": null,
           "poi_name": "Manhattan Valley"
         },
         "requested_pickup_time": "2025-01-04T08:13:19",
-        "requested_dropoff_time": "2025-01-04T08:55:28",
+        "requested_dropoff_time": "2025-01-04T08:49:28",
         "pickup_time_window_minutes": null,
         "dropoff_time_window_minutes": null,
         "has_arrival_constraint": true,
-        "passenger_count": 12.8,
+        "passenger_count": 1,
         "wheelchair_accessible": false,
         "shared_ride_ok": true,
         "luggage_count": 0,
-        "customer_id": "CUST_000148",
+        "customer_id": null,
         "priority": "normal",
         "additional_notes": null
       },
-      "parsing_time_ms": 0.14638900756835938,
+      "parsing_time_ms": 0.05793571472167969,
       "parsing_accuracy": null
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.371767",
+    "timestamp": "2025-11-17T10:45:25.696567",
     "event_type": "ROUTING_DECISION",
     "event_data": {
       "request_id": "5",
       "routing_decision": {
         "request_id": "5",
-        "vehicle_id": "V000025",
+        "vehicle_id": "V000093",
         "estimated_pickup_time": "2025-01-04T08:06:33",
         "estimated_dropoff_time": "2025-01-04T08:06:33",
-        "estimated_pickup_distance_miles": 0.19089245124622178,
-        "estimated_trip_distance_miles": 10.635505687870104,
+        "estimated_pickup_distance_miles": 0.38140556718933905,
+        "estimated_trip_distance_miles": 10.078676288703246,
         "waypoints": [],
-        "decision_rationale": "Dummy: assigned nearest vehicle V000025"
+        "decision_rationale": "Dummy: assigned nearest vehicle V000093"
       },
-      "decision_time_ms": 0.14638900756835938,
+      "decision_time_ms": 0.05793571472167969,
       "available_vehicles_count": 100
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.371823",
+    "timestamp": "2025-11-17T10:45:25.696896",
     "event_type": "VEHICLE_ASSIGNMENT",
     "event_data": {
-      "vehicle_id": "V000025",
+      "vehicle_id": "V000093",
       "request_id": "5",
       "current_location": {
-        "latitude": 40.84909185336649,
-        "longitude": -73.87301506533393
+        "latitude": 40.85455958218245,
+        "longitude": -73.86929674040195
       },
       "pickup_location": {
-        "latitude": 40.84906368254132,
-        "longitude": -73.87024865149974
+        "latitude": 40.849036452944674,
+        "longitude": -73.86907404736101
       },
-      "estimated_pickup_distance_miles": 0.19089245124622178,
+      "estimated_pickup_distance_miles": 0.38140556718933905,
       "estimated_pickup_time_minutes": 0.0
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.371920",
+    "timestamp": "2025-11-17T10:45:25.697237",
     "event_type": "TRIP_COMPLETE",
     "event_data": {
-      "vehicle_id": "V000025",
+      "vehicle_id": "V000093",
       "request_id": "5",
-      "trip_distance_miles": 9.222597014517419,
-      "trip_time_minutes": 22.134232834841804,
-      "fare": 26.386526267600114,
-      "deadhead_miles": 0.14460756946409564,
-      "net_revenue": 26.314222482868068
+      "trip_distance_miles": 8.525459328458437,
+      "trip_time_minutes": 20.46110238830025,
+      "fare": 24.58093966070735,
+      "deadhead_miles": 0.3818123390442189,
+      "net_revenue": 24.390033491185243
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.372642",
+    "timestamp": "2025-11-17T10:45:25.698123",
     "event_type": "REQUEST_ARRIVAL",
     "event_data": {
       "request_id": "6",
       "request_time": "2025-01-23T21:58:57",
-      "natural_language_text": "At 09:58 PM, book me a ride from Statue of Liberty destination Van Cortlandt Village",
+      "natural_language_text": "I need a ride from Marble Hill to Van Cortlandt Village. arrive by 10:02 PM",
       "has_ground_truth": true
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.372896",
+    "timestamp": "2025-11-17T10:45:25.698537",
     "event_type": "REQUEST_PARSED",
     "event_data": {
       "request_id": "6",
@@ -634,27 +634,27 @@
         "request_id": "6",
         "request_time": "2025-01-23T21:58:57",
         "origin": {
-          "latitude": 40.755216423229214,
-          "longitude": -73.98961664846725,
+          "latitude": 40.75773187835725,
+          "longitude": -73.98874823557732,
           "zone_id": 153,
           "zone_name": "Marble Hill",
           "address": null,
-          "poi_name": "Statue of Liberty"
+          "poi_name": "Marble Hill"
         },
         "destination": {
-          "latitude": 40.8359762415752,
-          "longitude": -73.87326967475765,
+          "latitude": 40.84826966566276,
+          "longitude": -73.87015931875406,
           "zone_id": 241,
           "zone_name": "Van Cortlandt Village",
           "address": null,
           "poi_name": "Van Cortlandt Village"
         },
-        "requested_pickup_time": "2025-01-23T21:58:16",
-        "requested_dropoff_time": "2025-01-23T22:15:27",
+        "requested_pickup_time": "2025-01-23T22:05:16",
+        "requested_dropoff_time": "NaT",
         "pickup_time_window_minutes": null,
         "dropoff_time_window_minutes": null,
-        "has_arrival_constraint": true,
-        "passenger_count": 7.58,
+        "has_arrival_constraint": false,
+        "passenger_count": 1,
         "wheelchair_accessible": false,
         "shared_ride_ok": false,
         "luggage_count": 0,
@@ -662,72 +662,72 @@
         "priority": "normal",
         "additional_notes": null
       },
-      "parsing_time_ms": 0.1595020294189453,
+      "parsing_time_ms": 0.06389617919921875,
       "parsing_accuracy": null
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.372989",
+    "timestamp": "2025-11-17T10:45:25.698922",
     "event_type": "ROUTING_DECISION",
     "event_data": {
       "request_id": "6",
       "routing_decision": {
         "request_id": "6",
-        "vehicle_id": "V000095",
+        "vehicle_id": "V000065",
         "estimated_pickup_time": "2025-01-23T21:58:57",
         "estimated_dropoff_time": "2025-01-23T21:58:57",
-        "estimated_pickup_distance_miles": 0.26676948316773547,
-        "estimated_trip_distance_miles": 9.772399272833969,
+        "estimated_pickup_distance_miles": 0.20436717338980837,
+        "estimated_trip_distance_miles": 10.294749619584945,
         "waypoints": [],
-        "decision_rationale": "Dummy: assigned nearest vehicle V000095"
+        "decision_rationale": "Dummy: assigned nearest vehicle V000065"
       },
-      "decision_time_ms": 0.1595020294189453,
+      "decision_time_ms": 0.06389617919921875,
       "available_vehicles_count": 100
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.373045",
+    "timestamp": "2025-11-17T10:45:25.699292",
     "event_type": "VEHICLE_ASSIGNMENT",
     "event_data": {
-      "vehicle_id": "V000095",
+      "vehicle_id": "V000065",
       "request_id": "6",
       "current_location": {
-        "latitude": 40.75805217205821,
-        "longitude": -73.99224461719643
+        "latitude": 40.75775900675569,
+        "longitude": -73.98578651672584
       },
       "pickup_location": {
-        "latitude": 40.755216423229214,
-        "longitude": -73.98961664846725
+        "latitude": 40.75773187835725,
+        "longitude": -73.98874823557732
       },
-      "estimated_pickup_distance_miles": 0.26676948316773547,
+      "estimated_pickup_distance_miles": 0.20436717338980837,
       "estimated_pickup_time_minutes": 0.0
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.373138",
+    "timestamp": "2025-11-17T10:45:25.699665",
     "event_type": "TRIP_COMPLETE",
     "event_data": {
-      "vehicle_id": "V000095",
+      "vehicle_id": "V000065",
       "request_id": "6",
-      "trip_distance_miles": 8.257151715823445,
-      "trip_time_minutes": 19.81716411797627,
-      "fare": 23.886022943982724,
-      "deadhead_miles": 0.2394028654814374,
-      "net_revenue": 23.766321511242005
+      "trip_distance_miles": 8.809665224529063,
+      "trip_time_minutes": 21.143196538869752,
+      "fare": 25.317032931530274,
+      "deadhead_miles": 0.15502714449213134,
+      "net_revenue": 25.23951935928421
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.373800",
+    "timestamp": "2025-11-17T10:45:25.700563",
     "event_type": "REQUEST_ARRIVAL",
     "event_data": {
       "request_id": "7",
       "request_time": "2025-01-21T19:52:49",
-      "natural_language_text": "I need a Lyft at 8:02 PM (can be ready in 6 minutes) pickup at my apartment headed to East Flatbush/Farragut",
+      "natural_language_text": "Take me from Bay Ridge to East Flatbush/Farragut",
       "has_ground_truth": true
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.374009",
+    "timestamp": "2025-11-17T10:45:25.700985",
     "event_type": "REQUEST_PARSED",
     "event_data": {
       "request_id": "7",
@@ -735,100 +735,100 @@
         "request_id": "7",
         "request_time": "2025-01-21T19:52:49",
         "origin": {
-          "latitude": 40.67799181038014,
-          "longitude": -73.94058512234905,
+          "latitude": 40.68614849534049,
+          "longitude": -73.94611443817797,
           "zone_id": 14,
           "zone_name": "Bay Ridge",
           "address": null,
           "poi_name": "Bay Ridge"
         },
         "destination": {
-          "latitude": 40.678274253467784,
-          "longitude": -73.9507753869716,
+          "latitude": 40.68242534588107,
+          "longitude": -73.93453201534172,
           "zone_id": 71,
           "zone_name": "East Flatbush/Farragut",
           "address": null,
           "poi_name": "East Flatbush/Farragut"
         },
-        "requested_pickup_time": "2025-01-21T20:02:43",
-        "requested_dropoff_time": "2025-01-21T20:45:10",
+        "requested_pickup_time": "2025-01-21T19:58:43",
+        "requested_dropoff_time": "NaT",
         "pickup_time_window_minutes": null,
         "dropoff_time_window_minutes": null,
-        "has_arrival_constraint": true,
-        "passenger_count": 35.22,
+        "has_arrival_constraint": false,
+        "passenger_count": 1,
         "wheelchair_accessible": false,
         "shared_ride_ok": false,
         "luggage_count": 0,
-        "customer_id": "CUST_000160",
+        "customer_id": "CUST_000006",
         "priority": "normal",
         "additional_notes": null
       },
-      "parsing_time_ms": 0.1285076141357422,
+      "parsing_time_ms": 0.06771087646484375,
       "parsing_accuracy": null
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.374091",
+    "timestamp": "2025-11-17T10:45:25.701368",
     "event_type": "ROUTING_DECISION",
     "event_data": {
       "request_id": "7",
       "routing_decision": {
         "request_id": "7",
-        "vehicle_id": "V000015",
+        "vehicle_id": "V000051",
         "estimated_pickup_time": "2025-01-21T19:52:49",
         "estimated_dropoff_time": "2025-01-21T19:52:49",
-        "estimated_pickup_distance_miles": 0.9382248705823432,
-        "estimated_trip_distance_miles": 0.7033982890382614,
+        "estimated_pickup_distance_miles": 0.9053158777819055,
+        "estimated_trip_distance_miles": 0.8394619533238871,
         "waypoints": [],
-        "decision_rationale": "Dummy: assigned nearest vehicle V000015"
+        "decision_rationale": "Dummy: assigned nearest vehicle V000051"
       },
-      "decision_time_ms": 0.1285076141357422,
+      "decision_time_ms": 0.06771087646484375,
       "available_vehicles_count": 100
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.374142",
+    "timestamp": "2025-11-17T10:45:25.701726",
     "event_type": "VEHICLE_ASSIGNMENT",
     "event_data": {
-      "vehicle_id": "V000015",
+      "vehicle_id": "V000051",
       "request_id": "7",
       "current_location": {
-        "latitude": 40.6792849353093,
-        "longitude": -73.95412095619243
+        "latitude": 40.67375076122961,
+        "longitude": -73.9504091131532
       },
       "pickup_location": {
-        "latitude": 40.67799181038014,
-        "longitude": -73.94058512234905
+        "latitude": 40.68614849534049,
+        "longitude": -73.94611443817797
       },
-      "estimated_pickup_distance_miles": 0.9382248705823432,
+      "estimated_pickup_distance_miles": 0.9053158777819055,
       "estimated_pickup_time_minutes": 0.0
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.374217",
+    "timestamp": "2025-11-17T10:45:25.702084",
     "event_type": "TRIP_COMPLETE",
     "event_data": {
-      "vehicle_id": "V000015",
+      "vehicle_id": "V000051",
       "request_id": "7",
-      "trip_distance_miles": 0.534351289904916,
-      "trip_time_minutes": 1.2824430957717983,
-      "fare": 3.8839698408537324,
-      "deadhead_miles": 0.7149111157057908,
-      "net_revenue": 3.526514283000837
+      "trip_distance_miles": 0.6591661471241417,
+      "trip_time_minutes": 1.58199875309794,
+      "fare": 4.207240321051527,
+      "deadhead_miles": 0.8857203846416538,
+      "net_revenue": 3.7643801287307004
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.374970",
+    "timestamp": "2025-11-17T10:45:25.702947",
     "event_type": "REQUEST_ARRIVAL",
     "event_data": {
       "request_id": "8",
       "request_time": "2025-01-30T20:35:49",
-      "natural_language_text": "Can you pick me up at Bensonhurst West? I'm going to Bensonhurst East",
+      "natural_language_text": "Can you take me from Bensonhurst West to Bensonhurst East? I need to stop at Downtown on the way",
       "has_ground_truth": true
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.375219",
+    "timestamp": "2025-11-17T10:45:25.703396",
     "event_type": "REQUEST_PARSED",
     "event_data": {
       "request_id": "8",
@@ -836,27 +836,27 @@
         "request_id": "8",
         "request_time": "2025-01-30T20:35:49",
         "origin": {
-          "latitude": 40.68411272501274,
-          "longitude": -73.94849880169342,
+          "latitude": 40.6843680235647,
+          "longitude": -73.95027005517638,
           "zone_id": 22,
           "zone_name": "Bensonhurst West",
           "address": null,
           "poi_name": "Bensonhurst West"
         },
         "destination": {
-          "latitude": 40.67473968580116,
-          "longitude": -73.94419817791233,
+          "latitude": 40.683015950823474,
+          "longitude": -73.94890819657205,
           "zone_id": 21,
           "zone_name": "Bensonhurst East",
           "address": null,
           "poi_name": "Bensonhurst East"
         },
-        "requested_pickup_time": "2025-01-30T20:42:23",
+        "requested_pickup_time": "2025-01-30T20:48:23",
         "requested_dropoff_time": "NaT",
         "pickup_time_window_minutes": null,
         "dropoff_time_window_minutes": null,
         "has_arrival_constraint": false,
-        "passenger_count": 14.14,
+        "passenger_count": 1,
         "wheelchair_accessible": false,
         "shared_ride_ok": false,
         "luggage_count": 0,
@@ -864,72 +864,72 @@
         "priority": "normal",
         "additional_notes": null
       },
-      "parsing_time_ms": 0.15211105346679688,
+      "parsing_time_ms": 0.06103515625,
       "parsing_accuracy": null
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.375325",
+    "timestamp": "2025-11-17T10:45:25.703789",
     "event_type": "ROUTING_DECISION",
     "event_data": {
       "request_id": "8",
       "routing_decision": {
         "request_id": "8",
-        "vehicle_id": "V000015",
+        "vehicle_id": "V000051",
         "estimated_pickup_time": "2025-01-30T20:35:49",
         "estimated_dropoff_time": "2025-01-30T20:35:49",
-        "estimated_pickup_distance_miles": 0.4323971339156818,
-        "estimated_trip_distance_miles": 0.7115677614382522,
+        "estimated_pickup_distance_miles": 1.0941666040108309,
+        "estimated_trip_distance_miles": 0.13241456960966538,
         "waypoints": [],
-        "decision_rationale": "Dummy: assigned nearest vehicle V000015"
+        "decision_rationale": "Dummy: assigned nearest vehicle V000051"
       },
-      "decision_time_ms": 0.15211105346679688,
+      "decision_time_ms": 0.06103515625,
       "available_vehicles_count": 100
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.375385",
+    "timestamp": "2025-11-17T10:45:25.704163",
     "event_type": "VEHICLE_ASSIGNMENT",
     "event_data": {
-      "vehicle_id": "V000015",
+      "vehicle_id": "V000051",
       "request_id": "8",
       "current_location": {
-        "latitude": 40.678274253467784,
-        "longitude": -73.9507753869716
+        "latitude": 40.68242534588107,
+        "longitude": -73.93453201534172
       },
       "pickup_location": {
-        "latitude": 40.68411272501274,
-        "longitude": -73.94849880169342
+        "latitude": 40.6843680235647,
+        "longitude": -73.95027005517638
       },
-      "estimated_pickup_distance_miles": 0.4323971339156818,
+      "estimated_pickup_distance_miles": 1.0941666040108309,
       "estimated_pickup_time_minutes": 0.0
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.375483",
+    "timestamp": "2025-11-17T10:45:25.704552",
     "event_type": "TRIP_COMPLETE",
     "event_data": {
-      "vehicle_id": "V000015",
+      "vehicle_id": "V000051",
       "request_id": "8",
-      "trip_distance_miles": 0.6857425096213029,
-      "trip_time_minutes": 1.645782023091127,
-      "fare": 4.2760730999191745,
-      "deadhead_miles": 0.4206922989861087,
-      "net_revenue": 4.06572695042612
+      "trip_distance_miles": 0.11755976039710177,
+      "trip_time_minutes": 0.28214342495304423,
+      "fare": 2.8044797794284935,
+      "deadhead_miles": 0.8355004093594055,
+      "net_revenue": 2.3867295747487907
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.376170",
+    "timestamp": "2025-11-17T10:45:25.705456",
     "event_type": "REQUEST_ARRIVAL",
     "event_data": {
       "request_id": "9",
       "request_time": "2025-01-16T14:42:49",
-      "natural_language_text": "10.68 passengers, 4 bags, arrive by 2:59 PM from Flatbush/Ditmas Park to Borough Park",
+      "natural_language_text": "Pick me up from home, i'm running late - I have to be at Borough Park by 03:07 PM, give or take 15.0 minutes for an appointment",
       "has_ground_truth": true
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.376403",
+    "timestamp": "2025-11-17T10:45:25.706374",
     "event_type": "REQUEST_PARSED",
     "event_data": {
       "request_id": "9",
@@ -937,90 +937,90 @@
         "request_id": "9",
         "request_time": "2025-01-16T14:42:49",
         "origin": {
-          "latitude": 40.682278250577355,
-          "longitude": -73.9458477930121,
+          "latitude": 40.677140191984726,
+          "longitude": -73.95059054825222,
           "zone_id": 89,
           "zone_name": "Flatbush/Ditmas Park",
           "address": null,
           "poi_name": "Flatbush/Ditmas Park"
         },
         "destination": {
-          "latitude": 40.682835661726166,
-          "longitude": -73.93541252555514,
+          "latitude": 40.675024783371875,
+          "longitude": -73.95223132897524,
           "zone_id": 26,
           "zone_name": "Borough Park",
           "address": null,
           "poi_name": "Borough Park"
         },
-        "requested_pickup_time": "2025-01-16T14:46:10",
-        "requested_dropoff_time": "2025-01-16T15:08:46",
+        "requested_pickup_time": "2025-01-16T14:42:10",
+        "requested_dropoff_time": "2025-01-16T15:07:46",
         "pickup_time_window_minutes": null,
         "dropoff_time_window_minutes": null,
         "has_arrival_constraint": true,
-        "passenger_count": 10.68,
+        "passenger_count": 1,
         "wheelchair_accessible": false,
         "shared_ride_ok": false,
         "luggage_count": 0,
-        "customer_id": null,
+        "customer_id": "CUST_000046",
         "priority": "normal",
         "additional_notes": null
       },
-      "parsing_time_ms": 0.15091896057128906,
+      "parsing_time_ms": 0.07891654968261719,
       "parsing_accuracy": null
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.376554",
+    "timestamp": "2025-11-17T10:45:25.706844",
     "event_type": "ROUTING_DECISION",
     "event_data": {
       "request_id": "9",
       "routing_decision": {
         "request_id": "9",
-        "vehicle_id": "V000015",
+        "vehicle_id": "V000051",
         "estimated_pickup_time": "2025-01-16T14:42:49",
         "estimated_dropoff_time": "2025-01-16T14:42:49",
-        "estimated_pickup_distance_miles": 0.5324689757851069,
-        "estimated_trip_distance_miles": 0.7210599507459001,
+        "estimated_pickup_distance_miles": 0.4217184328411377,
+        "estimated_trip_distance_miles": 0.1847231290919985,
         "waypoints": [],
-        "decision_rationale": "Dummy: assigned nearest vehicle V000015"
+        "decision_rationale": "Dummy: assigned nearest vehicle V000051"
       },
-      "decision_time_ms": 0.15091896057128906,
+      "decision_time_ms": 0.07891654968261719,
       "available_vehicles_count": 100
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.376612",
+    "timestamp": "2025-11-17T10:45:25.707183",
     "event_type": "VEHICLE_ASSIGNMENT",
     "event_data": {
-      "vehicle_id": "V000015",
+      "vehicle_id": "V000051",
       "request_id": "9",
       "current_location": {
-        "latitude": 40.67473968580116,
-        "longitude": -73.94419817791233
+        "latitude": 40.683015950823474,
+        "longitude": -73.94890819657205
       },
       "pickup_location": {
-        "latitude": 40.682278250577355,
-        "longitude": -73.9458477930121
+        "latitude": 40.677140191984726,
+        "longitude": -73.95059054825222
       },
-      "estimated_pickup_distance_miles": 0.5324689757851069,
+      "estimated_pickup_distance_miles": 0.4217184328411377,
       "estimated_pickup_time_minutes": 0.0
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.376692",
+    "timestamp": "2025-11-17T10:45:25.707528",
     "event_type": "TRIP_COMPLETE",
     "event_data": {
-      "vehicle_id": "V000015",
+      "vehicle_id": "V000051",
       "request_id": "9",
-      "trip_distance_miles": 0.5481520581741672,
-      "trip_time_minutes": 1.3155649396180014,
-      "fare": 3.919713830671093,
-      "deadhead_miles": 0.5280205934441753,
-      "net_revenue": 3.6557035339490054
+      "trip_distance_miles": 0.16958400068024682,
+      "trip_time_minutes": 0.40700160163259236,
+      "fare": 2.9392225617618393,
+      "deadhead_miles": 0.4154614564486003,
+      "net_revenue": 2.731491833537539
     }
   },
   {
-    "timestamp": "2025-10-29T23:15:07.376807",
+    "timestamp": "2025-11-17T10:45:25.708090",
     "event_type": "EVALUATION_END",
     "event_data": {
       "agent_name": "DemoAgent",
@@ -1036,20 +1036,20 @@
         },
         "routing_metrics": {
           "total_requests": 10,
-          "total_revenue": 99.07465611611416,
-          "total_idle_cost": 2.7148272088655734,
-          "net_revenue": 96.35982890724858,
-          "total_trip_miles": 28.600253326685,
-          "total_deadhead_miles": 5.429654417731147,
-          "deadhead_ratio": 0.15955536695870357,
-          "average_pickup_time_minutes": 1.3031170602554751,
-          "average_trip_time_minutes": 6.8640607984044,
-          "revenue_per_mile": 2.9113994918887482
+          "total_revenue": 94.98145967556387,
+          "total_idle_cost": 2.525682984204371,
+          "net_revenue": 92.4557766913595,
+          "total_trip_miles": 27.019868600603814,
+          "total_deadhead_miles": 5.051365968408742,
+          "deadhead_ratio": 0.15750456869812568,
+          "average_pickup_time_minutes": 1.2123278324180982,
+          "average_trip_time_minutes": 6.484768464144915,
+          "revenue_per_mile": 2.961577904685203
         },
         "total_requests_evaluated": 10,
-        "overall_score": 36.7451880235074
+        "overall_score": 36.471904368395165
       },
-      "end_time": "2025-10-29T23:15:07.376794"
+      "end_time": "2025-11-17T10:45:25.707896"
     }
   }
 ]

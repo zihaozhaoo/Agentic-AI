@@ -12,18 +12,18 @@
     },
     "routing_metrics": {
       "total_requests": 10,
-      "total_revenue": 99.07465611611416,
-      "total_idle_cost": 2.7148272088655734,
-      "net_revenue": 96.35982890724858,
-      "total_trip_miles": 28.600253326685,
-      "total_deadhead_miles": 5.429654417731147,
-      "deadhead_ratio": 0.15955536695870357,
-      "average_pickup_time_minutes": 1.3031170602554751,
-      "average_trip_time_minutes": 6.8640607984044,
-      "revenue_per_mile": 2.9113994918887482
+      "total_revenue": 94.98145967556387,
+      "total_idle_cost": 2.525682984204371,
+      "net_revenue": 92.4557766913595,
+      "total_trip_miles": 27.019868600603814,
+      "total_deadhead_miles": 5.051365968408742,
+      "deadhead_ratio": 0.15750456869812568,
+      "average_pickup_time_minutes": 1.2123278324180982,
+      "average_trip_time_minutes": 6.484768464144915,
+      "revenue_per_mile": 2.961577904685203
     },
     "total_requests_evaluated": 10,
-    "overall_score": 36.7451880235074
+    "overall_score": 36.471904368395165
   },
   "processed_requests": 10,
   "successful_requests": 10,
@@ -34,19 +34,19 @@
     "en_route_vehicles": 0,
     "on_trip_vehicles": 0,
     "offline_vehicles": 0,
-    "total_miles_driven": 34.02990774441615,
-    "total_deadhead_miles": 5.429654417731147,
-    "total_revenue": 99.07465611611414,
-    "deadhead_ratio": 0.15955536695870357
+    "total_miles_driven": 32.07123456901255,
+    "total_deadhead_miles": 5.051365968408742,
+    "total_revenue": 94.98145967556387,
+    "deadhead_ratio": 0.15750456869812574
   },
   "simulator_stats": {
     "total_requests_processed": 10,
     "completed_trips": 10,
     "active_trips": 0,
-    "total_deadhead_miles": 5.429654417731147,
-    "total_trip_miles": 28.600253326685,
-    "total_revenue": 99.07465611611414,
-    "deadhead_ratio": 0.15955536695870357
+    "total_deadhead_miles": 5.051365968408742,
+    "total_trip_miles": 27.01986860060381,
+    "total_revenue": 94.98145967556387,
+    "deadhead_ratio": 0.15750456869812574
   },
   "logging_stats": {
     "total_events": 52,
@@ -59,7 +59,7 @@
       "TRIP_COMPLETE": 10,
       "EVALUATION_END": 1
     },
-    "first_event": "2025-10-29T23:15:07.363769",
-    "last_event": "2025-10-29T23:15:07.376807"
+    "first_event": "2025-11-17T10:45:25.681088",
+    "last_event": "2025-11-17T10:45:25.708090"
   }
 }
