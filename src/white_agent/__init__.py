@@ -5,14 +5,15 @@ This module provides the interface and data structures for white agents
 that participate in the Green Agent evaluation.
 """
 
-from white_agent.data_structures import (
+from .data_structures import (
     Location,
     StructuredRequest,
     RoutingDecision,
     NaturalLanguageRequest,
     RequestPriority
 )
-from white_agent.base_agent import WhiteAgentBase, DummyWhiteAgent
+from .base_agent import WhiteAgentBase, DummyWhiteAgent
+from .baseline_agents import RandomBaselineAgent, RegexBaselineAgent
 
 __all__ = [
     'Location',
@@ -22,4 +23,6 @@ __all__ = [
     'RequestPriority',
     'WhiteAgentBase',
     'DummyWhiteAgent',
+    'RandomBaselineAgent',
+    'RegexBaselineAgent',
 ]

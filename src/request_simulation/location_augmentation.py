@@ -7,7 +7,12 @@ within taxi zones and validating them against trip distances using Google Maps A
 
 import pandas as pd
 import numpy as np
-import googlemaps
+try:
+    import googlemaps
+    GOOGLEMAPS_AVAILABLE = True
+except ImportError:
+    googlemaps = None
+    GOOGLEMAPS_AVAILABLE = False
 from typing import Dict, List, Tuple, Optional
 import time
 import random
@@ -68,8 +73,12 @@ class LocationAugmenter:
             google_maps_api_key = "AIzaSyASdmnEivZx-7u6s8tRQn4UbPZ8E9SDe8Y"
             logger.warning("Using hardcoded Google Maps API key - consider using environment variable")
 
-        self.gmaps = googlemaps.Client(key=google_maps_api_key)
-        logger.info("Google Maps client initialized")
+        if GOOGLEMAPS_AVAILABLE:
+            self.gmaps = googlemaps.Client(key=google_maps_api_key)
+            logger.info("Google Maps client initialized")
+        else:
+            self.gmaps = None
+            logger.warning("Google Maps client NOT initialized (module not found)")
 
         # Cache for geocoded locations
         self.location_cache: Dict[int, List[ExactLocation]] = {}

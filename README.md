@@ -206,6 +206,38 @@ python -m src.solver  # 运行完整流程
 
 ---
 
+## 🤖 Available Agents (Baseline System)
+
+为了评估新开发的 Agent 表现，我们提供了一套 Baseline Agents 作为参照：
+
+### 1. `DummyWhiteAgent` (Test Only)
+- **类型**: Cheating / Debugging
+- **机制**: 直接读取 Ground Truth 数据，解析准确率 100%。
+- **用途**: 仅用于验证 Pipeline 流程是否通畅，**不可用于实际评分**。
+
+### 2. `RegexBaselineAgent` (Rule-based)
+- **类型**: Simple Baseline
+- **机制**: 使用正则表达式和关键词匹配（如 "from", "to"）提取地点；利用 `taxi_zone_lookup.csv` 匹配区域名称。
+- **用途**: 作为 "非作弊" 的基础基线。如果你的 Agent 得分低于它，说明解析逻辑存在严重问题。
+
+### 3. `RandomBaselineAgent` (Lower Bound)
+- **类型**: Random
+- **机制**: 随机猜测地点和分配车辆。
+- **用途**: 确立性能下界（Lower Bound）。
+
+### 📊 对比用法 (Conceptual)
+
+在最终的评估报告中，你应该展示如下对比：
+
+| Agent Name | Parsing Accuracy | Routing Efficiency | Notes |
+|------------|------------------|--------------------|-------|
+| **YourAgent** | **85%** | **High** | (Target) |
+| RegexBaseline | 40% | Medium | Baseline |
+| RandomBaseline | ~0% | Low | Lower Bound |
+| *DummyWhiteAgent* | *100%* | *High* | *Debug Only* |
+
+---
+
 ## 📝 项目目标
 
 根据设计文档，本项目的目标是构建一个**Green Agent评估环境**，用于测试和评估不同的**White Agent**（打车调度算法）在以下方面的性能：
@@ -240,6 +272,12 @@ python src/google_map/gmap.py "起点地址" "终点地址"
 - **10/20 - 11/3**: 完整Green Agent实现和文档
 - **11/9**: Top 3 Green Agent公布
 - **11/17 - 12/12**: 竞赛White Agent实现（如果入选）
+
+## 📖 文档资源
+
+- [**EVALUATION_GUIDE.md**](./EVALUATION_GUIDE.md): 详细的测试与评估指南 (New!)
+- [COMPONENT_GUIDE.md](./COMPONENT_GUIDE.md): 系统组件说明
+- [GETTING_STARTED.md](./GETTING_STARTED.md): 新手入门教程
 
 ---
 

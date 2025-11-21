@@ -207,7 +207,10 @@ class WhiteAgentBase(ABC):
 class DummyWhiteAgent(WhiteAgentBase):
     """
     Dummy implementation of white agent for testing.
-
+    
+    WARNING: This agent is for TESTING ONLY. It uses ground truth data which
+    is considered "cheating" in actual evaluation.
+    
     This agent provides minimal functionality:
     - Copies ground truth for parsing (cheating, for testing only)
     - Assigns nearest available vehicle
