@@ -16,6 +16,10 @@ from request_simulation import RequestSimulator
 from white_agent import DummyWhiteAgent
 from environment import GreenAgentEnvironment
 from utils import EventLogger
+from google_map.gmap import create_distance_calculator
+
+# Google Maps API Key - Replace with your actual key
+GOOGLE_MAPS_API_KEY = "YOUR_GOOGLE_MAPS_API_KEY_HERE"
 
 
 def main():
@@ -67,8 +71,21 @@ def main():
     print("Step 3: Initializing Green Agent Environment...")
     print("-" * 80)
 
+    # Create distance calculator with Google Maps API
+    # Set use_google_maps=True and provide your API key for actual travel times
+    use_google_maps = False  # Set to True to use Google Maps API
+    distance_calculator = None
+
+    if use_google_maps:
+        if GOOGLE_MAPS_API_KEY != "YOUR_GOOGLE_MAPS_API_KEY_HERE":
+            distance_calculator = create_distance_calculator(GOOGLE_MAPS_API_KEY)
+            print("  ✓ Google Maps distance calculator enabled")
+        else:
+            print("  ⚠ Google Maps API key not set, using fallback estimates")
+
     environment = GreenAgentEnvironment(
         request_simulator=request_simulator,
+        distance_calculator=distance_calculator,  # Pass distance calculator for actual travel times
         logger=logger
     )
 
