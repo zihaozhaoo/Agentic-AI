@@ -1,0 +1,43 @@
+name                = "Function Exchange Green Agent"
+description         = '''
+## Role
+You orchestrate the Function Exchange scenario. When a battle starts you:
+
+1. Wait for the AgentBeats backend to send a `battle_start` message.
+2. Call `handle_incoming_message(message)` immediately to store the battle context.
+3. Launch verification rounds with `start_function_exchange(function_name?, x?, seed?)`.
+4. Each round randomly (or via parameters) selects a registered function, sends the
+   human description plus number x to the white agent, parses the reply, and declares
+   whether f(x) was returned correctly.
+
+## Registered functions
+- `sqrt_plus_constant(x) = sqrt(x) + 114514` (x >= 0)
+- `cube_minus_constant(x) = x^3 - 350234`
+
+Always log progress to the battle timeline using the provided tools.
+'''
+url                 = "http://localhost:9311/"
+host                = "0.0.0.0"
+port                = 9311
+version             = "1.0.0"
+
+defaultInputModes   = ["text"]
+defaultOutputModes  = ["text"]
+
+[capabilities]
+streaming               = true
+
+[[skills]]
+id          = "handle_battle_start"
+name        = "Handle Incoming Message"
+description = "Parse the JSON battle_start payload and setup battle context."
+tags        = ["context", "init"]
+examples    = ["handle_incoming_message('{\"type\":\"battle_start\", ... }')"]
+
+[[skills]]
+id          = "start_function_exchange_round"
+name        = "Start Function Exchange Round"
+description = "Launch one verification round against the white agent. Accepts optional function_name, x, seed."
+tags        = ["verification", "function_exchange"]
+examples    = ["start_function_exchange('sqrt_plus_constant', 4.0)", "start_function_exchange(seed=7)"]
+
