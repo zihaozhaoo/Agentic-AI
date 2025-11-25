@@ -2,9 +2,11 @@
 
 ```bash
 python3 --version  # Should be 3.11.14
-node -v            # Should be v24.8.0
+node -v            # Should be v24.8.0 (or v22.12+)
 npm -v             # Should be 11.6.0
 ```
+
+**注意**: Node.js v23.x 可能不被支持。如果遇到 `EBADENGINE` 错误，请使用 Node v22.12+ 或 v24+。
 
 Build Agentbeats
 
@@ -24,8 +26,12 @@ agentbeats check
 设置 API KEY
 
 ```bash
+# 方法 1: 直接 Export
 export OPENAI_API_KEY="sk-your-openai-api-key-here"
 export OPENROUTER_API_KEY="sk-your-openai-api-key-here"
+
+# 方法 2: 如果你有 .env.local 文件 (例如在 Agentic-AI/.env.local)
+# source ../Agentic-AI/.env.local
 ```
 
 安装前端依赖：
@@ -33,6 +39,16 @@ export OPENROUTER_API_KEY="sk-your-openai-api-key-here"
 ```bash
 agentbeats install_frontend
 agentbeats install_frontend --webapp_version webapp-v2
+```
+
+**注意**: 如果启动时报错 `ERR_MODULE_NOT_FOUND` 或 `EBADENGINE` (缺少依赖或 Node 版本不匹配)，请尝试手动安装：
+
+```bash
+cd agentbeats/frontend/webapp-v2
+# 如果 Node 版本不匹配 (例如 v23)，尝试强制安装:
+npm install --force
+# 或者切换到支持的 Node 版本 (v22.12+ 或 v24+)
+cd ../../.. # 回到 agentbeats 根目录
 ```
 
 这个时候如果用
@@ -46,6 +62,7 @@ agentbeats check
 部署 agentbeats 平台（检查端口 5173，9000，9001 是否开放）：
 
 ```bash
+# 确保 API KEY 已经设置
 agentbeats deploy --deploy_mode dev
 ```
 
