@@ -1,0 +1,3 @@
+[console_scripts]
+ab = agentbeats.cli:main
+agentbeats = agentbeats.cli:main

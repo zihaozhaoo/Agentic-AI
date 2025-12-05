@@ -1,0 +1,86 @@
+{
+	"/(game)": [
+		"src/routes/(game)/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/": [
+		"src/routes/+page.ts",
+		"src/routes/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/(game)/agents": [
+		"src/routes/(game)/+layout.ts",
+		"src/routes/+layout.ts",
+		"src/routes/(game)/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/(game)/agents/directory": [
+		"src/routes/(game)/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/(game)/agents/my-agents": [
+		"src/routes/(game)/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/(game)/agents/register": [
+		"src/routes/(game)/agents/register/+page.server.ts",
+		"src/routes/(game)/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/(game)/agents/[agent_id]": [
+		"src/routes/(game)/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/auth/callback": [
+		"src/routes/+layout.ts"
+	],
+	"/(game)/battles": [
+		"src/routes/(game)/+layout.ts",
+		"src/routes/+layout.ts",
+		"src/routes/(game)/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/(game)/battles/ongoing": [
+		"src/routes/(game)/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/(game)/battles/past": [
+		"src/routes/(game)/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/(game)/battles/stage-battle": [
+		"src/routes/(game)/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/(game)/battles/[battle_id]": [
+		"src/routes/(game)/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/(game)/dashboard": [
+		"src/routes/(game)/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/docs": [
+		"src/routes/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/docs/api/api-reference": [
+		"src/routes/docs/api/api-reference/+page.ts",
+		"src/routes/+layout.ts"
+	],
+	"/docs/cli/cli-reference": [
+		"src/routes/docs/cli/cli-reference/+page.ts",
+		"src/routes/+layout.ts"
+	],
+	"/docs/getting-started/making-new-docs": [
+		"src/routes/docs/getting-started/making-new-docs/+page.ts",
+		"src/routes/+layout.ts"
+	],
+	"/docs/getting-started/quick-start": [
+		"src/routes/docs/getting-started/quick-start/+page.ts",
+		"src/routes/+layout.ts"
+	],
+	"/login": [
+		"src/routes/+layout.ts"
+	]
+}
