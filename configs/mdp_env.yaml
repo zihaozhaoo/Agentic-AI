@@ -1,0 +1,10 @@
+environment: 
+  user_model: normal_user
+  mask_action: True
+  max_delta: 8
+  patience_penalty: 1
+  infeasibility_penalty: 500
+  seed: null
+
+
+  
