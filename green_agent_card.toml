@@ -1,0 +1,94 @@
+name = "NYC Ride-Hailing Green Agent"
+description = """
+## Your Role
+You are the green agent (orchestrator and evaluator) for the NYC ride-hailing dispatch evaluation system.
+
+## Responsibilities
+1. **Request Generation**: Generate realistic natural language ride requests from NYC TLC trip data
+2. **Fleet Management**: Maintain and track a dynamic fleet of vehicles across NYC
+3. **Evaluation Orchestration**: Coordinate battles between white agents competing on ride allocation
+4. **Performance Scoring**: Evaluate white agents on parsing accuracy and routing efficiency
+5. **Simulation Management**: Run time-stepped simulations with realistic urban dynamics
+
+## Evaluation Metrics
+- **Parsing Accuracy**: Origin/destination zone accuracy, time constraints, special requirements
+- **Net Revenue**: Total ride revenue minus idle/deadhead costs
+- **Operational Efficiency**: Deadhead ratio, pickup times, revenue per mile
+- **Service Quality**: Request fulfillment rate, passenger wait times
+
+## Battle Format
+White agents receive natural language ride requests and must:
+1. Parse the request into structured data (origin, destination, time, constraints)
+2. Make routing decisions (assign vehicles to requests)
+3. Optimize for net revenue while maintaining service quality
+
+The green agent evaluates both parsing accuracy and routing performance to determine winners.
+"""
+url = "http://localhost:8002"
+version = "1.0.0"
+
+defaultInputModes = ["text"]
+defaultOutputModes = ["text"]
+
+[capabilities]
+streaming = true
+
+[[skills]]
+id = "host_evaluation"
+name = "Host Ride-Hailing Evaluation"
+description = "Host a complete ride-hailing dispatch evaluation session with multiple white agents."
+tags = ["evaluation", "orchestration", "battle-hosting"]
+examples = [
+    "Start a new evaluation with 100 requests and 50 vehicles",
+    "Initialize battle between AgentA and AgentB on NYC dataset"
+]
+
+[[skills]]
+id = "generate_requests"
+name = "Generate Ride Requests"
+description = "Generate realistic natural language ride requests from NYC trip data."
+tags = ["data-generation", "simulation"]
+examples = [
+    "Generate 100 ride requests from Manhattan during rush hour",
+    "Create requests with time constraints and special requirements"
+]
+
+[[skills]]
+id = "evaluate_parsing"
+name = "Evaluate Request Parsing"
+description = "Score white agent's ability to parse natural language requests into structured data."
+tags = ["evaluation", "parsing", "nlp"]
+examples = [
+    "Evaluate parsing accuracy for origin and destination extraction",
+    "Check if time constraints and wheelchair requirements were correctly parsed"
+]
+
+[[skills]]
+id = "evaluate_routing"
+name = "Evaluate Routing Decisions"
+description = "Score white agent's vehicle allocation and routing efficiency."
+tags = ["evaluation", "routing", "optimization"]
+examples = [
+    "Calculate net revenue for the routing decisions",
+    "Measure deadhead ratio and average pickup times"
+]
+
+[[skills]]
+id = "manage_fleet"
+name = "Manage Vehicle Fleet"
+description = "Initialize and track dynamic vehicle fleet state across NYC."
+tags = ["fleet-management", "simulation"]
+examples = [
+    "Initialize 77,000 vehicles across NYC zones",
+    "Update vehicle availability after trip assignments"
+]
+
+[[skills]]
+id = "calculate_metrics"
+name = "Calculate Performance Metrics"
+description = "Compute comprehensive performance metrics for white agent evaluation."
+tags = ["metrics", "analytics", "scoring"]
+examples = [
+    "Calculate total net revenue and efficiency metrics",
+    "Generate performance comparison between multiple agents"
+]
