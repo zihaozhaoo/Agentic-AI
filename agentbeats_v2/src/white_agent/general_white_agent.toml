@@ -1,0 +1,15 @@
+name = "sample_white_agent"
+description = "Sample LLM-backed white agent (echo)"
+version = "2.0.0"
+url = "http://localhost:9102"
+default_input_modes = ["text/plain"]
+default_output_modes = ["text/plain"]
+
+[capabilities]
+
+[[skills]]
+id = "task_fulfillment"
+name = "Task Fulfillment"
+description = "Handles user requests and replies with LLM-generated responses."
+tags = ["general"]
+examples = []

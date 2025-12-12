@@ -9,23 +9,30 @@ version = "1.2.5"
 description = "AgentBeats SDK for building security-contest AI agents"
 requires-python = ">=3.11"
 authors = [{ "name" = "Simon Xie", "email" = "simonxie2004@outlook.com" }]
-dependencies = ["tomli>=2", 
-                "toml", 
-                "fastmcp", 
-                "fastapi", 
-                "uvicorn",
-                "pydantic>=2.0.0",
-                "httpx",
-                "a2a-sdk>=0.3.0",
-                "paramiko>=3.5.1",
-                "openai-agents",
-                "openai", 
-                "sqlalchemy",
-                "supabase",
-                "PyJWT",
-                "python-dotenv",
-                "python-multipart",
-                "google-cloud-storage"]
+dependencies = [
+    "tomli>=2",
+    "toml",
+    "fastmcp",
+    "fastapi",
+    "uvicorn",
+    "pydantic>=2.0.0",
+    "httpx",
+    "a2a-sdk>=0.3.0",
+    "paramiko>=3.5.1",
+    "openai-agents",
+    "openai",
+    "sqlalchemy",
+    "supabase",
+    "PyJWT",
+    "python-dotenv",
+    "python-multipart",
+    "google-cloud-storage",
+    "typer>=0.20.0",
+    "pandas>=2.3.3",
+    "litellm>=1.80.9",
+    "pyarrow>=22.0.0",
+    "fastparquet>=2024.11.0",
+]
 license = { text = "MIT" }
 readme = "README.md"
 classifiers = [

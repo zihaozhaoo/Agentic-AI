@@ -74,7 +74,7 @@ class AgentBeatsA2AClient:
                                 endpoint: str,                                 
                                 opponent_infos: List[Dict[str, Any]],
                                 battle_id: str,
-                                backend_url: str = "http://localhost:9000",
+                                backend_url: str = "http://localhost:39000",
                                 green_agent_name: str = "green_agent",
                                 red_agent_names: Dict[str, str] = None,
                                 task_config: str = "") -> bool:
@@ -179,7 +179,7 @@ class AgentBeatsA2AClient:
                                 battle_id: str,
                                 agent_name: str,
                                 agent_id: str,
-                                backend_url: str = "http://localhost:9000"):
+                                backend_url: str = "http://localhost:39000"):
         try:
             battle_info = {
                 "type": "battle_info",

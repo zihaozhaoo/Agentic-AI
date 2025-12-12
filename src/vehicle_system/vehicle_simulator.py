@@ -180,43 +180,44 @@ class VehicleSimulator:
         self,
         current_time: datetime,
         time_delta: timedelta
-    ):
+    ) -> list[Dict[str, Any]]:
         """
-        Advance simulation time and update vehicle states.
-
-        This method simulates the passage of time and updates vehicles
-        that should reach their destinations.
+        Advance simulation time and update vehicle states, returning any completed trips.
 
         Args:
             current_time: Current simulation time
             time_delta: Time to advance
+
+        Returns:
+            List of trip completion records generated during this time advance.
         """
+        # Calculate the target timestamp we advance to
         new_time = current_time + time_delta
+        completed_trips: list[Dict[str, Any]] = []
 
-        # Check all active trips
+        # Walk through active trips and promote or finish them as time elapses
         for request_id, trip_info in list(self.active_trips.items()):
-            if trip_info['status'] == 'en_route_to_pickup':
-                # Check if vehicle reached pickup
-                if new_time >= trip_info['estimated_pickup_time']:
-                    vehicle = self.vehicle_database.get_vehicle_by_id(trip_info['vehicle_id'])
-                    if vehicle:
-                        # Start trip
-                        vehicle.start_trip(request_id)
-                        vehicle.update_location(trip_info['pickup_location'], new_time)
-                        trip_info['status'] = 'on_trip'
-                        trip_info['actual_pickup_time_timestamp'] = new_time
+            if trip_info['status'] == 'en_route_to_pickup' and new_time >= trip_info['estimated_pickup_time']:
+                vehicle = self.vehicle_database.get_vehicle_by_id(trip_info['vehicle_id'])
+                if vehicle:
+                    vehicle.start_trip(request_id)
+                    vehicle.update_location(trip_info['pickup_location'], new_time)
+                    trip_info['status'] = 'on_trip'
+                    trip_info['actual_pickup_time_timestamp'] = new_time
 
-                        # Calculate dropoff time
-                        _, trip_time = self.distance_calculator(
-                            trip_info['pickup_location'],
-                            trip_info['dropoff_location']
-                        )
-                        trip_info['estimated_dropoff_time'] = new_time + timedelta(minutes=trip_time)
+                    # Compute when the dropoff should occur based on travel time
+                    _, trip_time = self.distance_calculator(
+                        trip_info['pickup_location'],
+                        trip_info['dropoff_location']
+                    )
+                    trip_info['estimated_dropoff_time'] = new_time + timedelta(minutes=trip_time)
 
-            elif trip_info['status'] == 'on_trip':
-                # Check if trip should be completed
-                if new_time >= trip_info.get('estimated_dropoff_time', new_time):
-                    self.simulate_trip_completion(request_id, new_time)
+            if trip_info['status'] == 'on_trip' and new_time >= trip_info.get('estimated_dropoff_time', new_time):
+                completion = self.simulate_trip_completion(request_id, new_time)
+                if completion:
+                    completed_trips.append(completion)
+
+        return completed_trips
 
     def get_trip_status(self, request_id: str) -> Optional[Dict[str, Any]]:
         """

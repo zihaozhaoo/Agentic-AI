@@ -12,13 +12,13 @@ export default defineConfig({
 	server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:9000',
+        target: 'http://localhost:39000',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, '')
       },
       '/ws': {
-        target: 'ws://localhost:9000',
+        target: 'ws://localhost:39000',
         ws: true,
         changeOrigin: true,
         secure: false

@@ -82,3 +82,63 @@ The CLI `agentbeats load_scenario ...` command now supports scenario TOMLs where
   - Live battle stream: `http://localhost:5173/battles`  
   - Logs: `logs/function_exchange_green_agent.log`, `logs/function_exchange_white_agent.log`, `logs/function_exchange_orchestrator.log`
 - **What happens**: The green agent picks a registered function (`sqrt_plus_constant` or `cube_minus_constant`), sends x + the human description to the white agent, receives f(x), and checks it. Results are recorded to the backend and the log files above.
+
+## 2025-12-10 22:41 UTC
+
+### Modified/Added Files
+- `src/request_simulation/request_simulator.py`: Added dense arrival rescheduling via `mean_interarrival_seconds` and optional `start_time`, plus shifted downstream timestamps so requests arrive in rapid succession while keeping pickup/dropoff windows consistent.
+- `src/environment/green_agent_environment.py`: Seeded vehicles evenly across taxi zones, advanced the simulator clock between requests, and finalized trips asynchronously to keep cars busy until dropoff; exposed `prefer_uniform_distribution` and `mean_interarrival_seconds` hooks through `initialize_vehicles` and `generate_requests_from_data`.
+- `src/vehicle_system/vehicle_simulator.py`: Advanced time now returns completed trips so the environment can free vehicles only after simulated dropoff.
+- `examples/evaluate_baselines.py`: Baseline evaluation now uses the even vehicle spread and dense arrivals to mirror a high-utilization fleet.
+
+### Usage Guide
+- Run the baseline evaluation with busy-fleet settings (dense requests + even start layout):
+  ```bash
+  python3 examples/evaluate_baselines.py
+  ```
+- To generate busy-period requests elsewhere, pass `mean_interarrival_seconds` to the simulator helpers:
+  ```python
+  requests = environment.generate_requests_from_data(
+      parquet_path="fhvhv_tripdata_2025-01.parquet",
+      n_requests=500,
+      augment_location=True,
+      mean_interarrival_seconds=45.0,  # smaller means more overlap/busier vehicles
+  )
+  ```
+- To seed a custom run with uniformly spread vehicles, rely on the defaults or set `prefer_uniform_distribution=True` when calling `initialize_vehicles`; set it to `False` only if you explicitly want clustered historical locations.
+
+## 2025-12-10 23:11 UTC
+
+### Modified/Added Files
+- `src/request_simulation/request_simulator.py`: Added uniform pickup-zone sampling to flatten hotspot bias and lowered the default `mean_interarrival_seconds` to 15s so requests arrive fast enough to keep the fleet busy.
+- `src/environment/green_agent_environment.py`: Broadened the even vehicle seeding to sample across borough footprints (not just borough centers) and exposed the uniform pickup sampling flag through `generate_requests_from_data`.
+- `examples/evaluate_baselines.py`: Uses the new uniform pickup sampling with a tighter 12s interarrival to drive higher utilization during baseline runs.
+
+### Usage Guide
+- Run the baseline with denser demand and even vehicle seeding (no Google Maps calls):
+  ```bash
+  python3 examples/evaluate_baselines.py
+  ```
+- If you want to rebalance pickups elsewhere, call:
+  ```python
+  requests = environment.generate_requests_from_data(
+      parquet_path="fhvhv_tripdata_2025-01.parquet",
+      n_requests=2000,
+      augment_location=False,
+      mean_interarrival_seconds=12.0,   # smaller → busier
+      uniform_zone_sampling=True        # flatten pickup hotspots
+  )
+  ```
+- Vehicle initialization stays even by default (`prefer_uniform_distribution=True`); keep it enabled to avoid starting clusters, or set to `False` only when you intentionally want historical clustering.
+
+## 2025-12-11 16:21 UTC
+
+### Modified/Added Files
+- `src/environment/green_agent_environment.py`: Tightened borough bounding boxes and jitter to keep seeded vehicles on land and closer to demand; retained even distribution across zones.
+- `src/vehicle_system/vehicle_database.py`: When initial locations are provided, vehicles now round-robin through those coordinates with slight jitter instead of random re-sampling, preventing clusters and water spawns.
+
+### Usage Guide
+- Regenerate requests and rerun baselines after these fixes to re-seed vehicles on land:
+  ```bash
+  python3 examples/evaluate_baselines.py
+  ```

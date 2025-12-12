@@ -492,24 +492,24 @@ def main():
     load_scenario_parser.add_argument("--launch-mode", choices=["tmux", "separate", "current"], 
                                 default="", help="Launching terminal; Will override scenario.toml's settings!")
     load_scenario_parser.add_argument("--register_agents", action="store_true", default=False, help="Register agents to backend (default: false)")
-    load_scenario_parser.add_argument("--backend", help="Backend URL", default="http://localhost:9000")
+    load_scenario_parser.add_argument("--backend", help="Backend URL", default="http://localhost:39000")
 
     # run_scenario command
     run_scenario_parser = sub_parser.add_parser("run_scenario", help="Run a scenario from scenario.toml (requires frontend and backend to be running; eqivalant to `ab load_scenario` + register agent + start battle)")
     run_scenario_parser.add_argument("scenario_root", help="Path to scenario directory")
     run_scenario_parser.add_argument("--launch_mode", choices=["tmux", "separate", "current"],
                                 default="", help="Launching terminal; Will override scenario.toml's settings!")
-    run_scenario_parser.add_argument("--backend", help="Backend URL", default="http://localhost:9000")
+    run_scenario_parser.add_argument("--backend", help="Backend URL", default="http://localhost:39000")
     run_scenario_parser.add_argument("--frontend", help="Frontend URL", default="http://localhost:5173")
 
     # run_backend command
     backend_parser = sub_parser.add_parser("run_backend", help="Start the AgentBeats backend server")
     backend_parser.add_argument("--host", default="localhost", help="Backend host")
-    backend_parser.add_argument("--backend_port", type=int, default=9000, help="Backend port (default: 9000)")
-    backend_parser.add_argument("--mcp_port", type=int, default=9001, help=f"MCP port (default: 9001)")
+    backend_parser.add_argument("--backend_port", type=int, default=39000, help="Backend port (default: 39000)")
+    backend_parser.add_argument("--mcp_port", type=int, default=39001, help=f"MCP port (default: 39001)")
     backend_parser.add_argument("--reload", action="store_true", help="Enable auto-reload for development")
     backend_parser.add_argument("--supabase_auth", action="store_true", help="Enable Supabase authentication (default: use dev login mode)")
-    backend_parser.add_argument("--public_url", help="Public URL for backend (e.g., http://yourdomain.com:9000).")
+    backend_parser.add_argument("--public_url", help="Public URL for backend (e.g., http://yourdomain.com:39000).")
 
     # run_frontend command
     frontend_parser = sub_parser.add_parser("run_frontend", help="Start the AgentBeats frontend server")
@@ -530,11 +530,11 @@ def main():
                               help="Deployment mode: dev (development) or build (production)")
     deploy_parser.add_argument("--launch_mode", choices=["current", "separate", "tmux"], default="current",
                               help="Launch mode: current (same terminal), separate (separate terminals), tmux (tmux session)")
-    deploy_parser.add_argument("--backend_port", type=int, default=9000, help="Backend port (default: 9000)")
+    deploy_parser.add_argument("--backend_port", type=int, default=39000, help="Backend port (default: 39000)")
     deploy_parser.add_argument("--frontend_port", type=int, default=5173, help="Frontend port (default: 5173)")
-    deploy_parser.add_argument("--mcp_port", type=int, default=9001, help="MCP server port (default: 9001)")
+    deploy_parser.add_argument("--mcp_port", type=int, default=39001, help="MCP server port (default: 39001)")
     deploy_parser.add_argument("--supabase_auth", action="store_true", help="Enable Supabase authentication (default: use dev login mode)")
-    deploy_parser.add_argument("--public_url", help="Public URL for backend (e.g., http://yourdomain.com:9000).", default=None)
+    deploy_parser.add_argument("--public_url", help="Public URL for backend (e.g., http://yourdomain.com:39000).", default=None)
 
     # check command
     check_parser = sub_parser.add_parser("check", help="Check AgentBeats environment setup")

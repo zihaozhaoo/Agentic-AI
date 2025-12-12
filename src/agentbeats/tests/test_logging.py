@@ -20,23 +20,23 @@ class TestBattleContext(unittest.TestCase):
     
     def test_battle_context_creation(self):
         """Test basic BattleContext creation."""
-        context = BattleContext("battle_123", "http://localhost:9000", "agent1")
+        context = BattleContext("battle_123", "http://localhost:39000", "agent1")
         
         self.assertEqual(context.battle_id, "battle_123")
-        self.assertEqual(context.backend_url, "http://localhost:9000")
+        self.assertEqual(context.backend_url, "http://localhost:39000")
         self.assertEqual(context.agent_name, "agent1")
         self.assertIsNone(context.mcp_tools)
     
     def test_battle_context_with_mcp_tools(self):
         """Test BattleContext creation with MCP tools."""
         mcp_tools = {"tool1": "config1", "tool2": "config2"}
-        context = BattleContext("battle_123", "http://localhost:9000", "agent1", mcp_tools)
+        context = BattleContext("battle_123", "http://localhost:39000", "agent1", mcp_tools)
         
         self.assertEqual(context.mcp_tools, mcp_tools)
     
     def test_battle_context_defaults(self):
         """Test BattleContext with default values."""
-        context = BattleContext("battle_123", "http://localhost:9000")
+        context = BattleContext("battle_123", "http://localhost:39000")
         
         self.assertEqual(context.agent_name, "system")
         self.assertIsNone(context.mcp_tools)
@@ -47,7 +47,7 @@ class TestSystemLogging(unittest.TestCase):
     
     def setUp(self):
         """Set up test context."""
-        self.context = BattleContext("battle_123", "http://localhost:9000", "agent1")
+        self.context = BattleContext("battle_123", "http://localhost:39000", "agent1")
     
     @patch('agentbeats.logging.logging._make_api_request')
     def test_log_ready_success(self, mock_api_request):
@@ -134,7 +134,7 @@ class TestInteractionHistory(unittest.TestCase):
     
     def setUp(self):
         """Set up test context."""
-        self.context = BattleContext("battle_123", "http://localhost:9000", "agent1")
+        self.context = BattleContext("battle_123", "http://localhost:39000", "agent1")
     
     @patch('agentbeats.logging.interaction_history._make_api_request')
     def test_record_battle_event_success(self, mock_api_request):
@@ -218,7 +218,7 @@ class TestAPIMakeRequest(unittest.TestCase):
     
     def setUp(self):
         """Set up test context."""
-        self.context = BattleContext("battle_123", "http://localhost:9000", "agent1")
+        self.context = BattleContext("battle_123", "http://localhost:39000", "agent1")
     
     @patch('requests.post')
     def test_make_api_request_success(self, mock_post):
@@ -234,7 +234,7 @@ class TestAPIMakeRequest(unittest.TestCase):
         
         self.assertTrue(result)
         mock_post.assert_called_once_with(
-            "http://localhost:9000/battles/battle_123/test",
+            "http://localhost:39000/battles/battle_123/test",
             json=data,
             headers={"Content-Type": "application/json"},
             timeout=10

@@ -94,7 +94,7 @@ export const actions: Actions = {
       console.log('Request body alias:', requestBody.alias);
       console.log('Sending request to backend:', requestBody);
       
-      const response = await fetch('http://localhost:9000/agents', {
+      const response = await fetch('http://localhost:39000/agents', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

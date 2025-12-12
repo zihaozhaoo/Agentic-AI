@@ -9,18 +9,81 @@ benchmarks for evaluating custom agents.
 import re
 import random
 import csv
-import os
+import sys
+from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
-from datetime import datetime
+from datetime import datetime, timedelta
+
+# Add parent path for request_simulation import
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from .base_agent import WhiteAgentBase
 from .data_structures import (
     NaturalLanguageRequest,
     StructuredRequest,
     RoutingDecision,
-    Location,
-    RequestPriority
+    Location
 )
+from request_simulation.zone_coordinates import get_zone_coordinate, get_borough_center
+
+
+def _possible_lookup_paths() -> List[Path]:
+    """Return possible paths to the taxi zone lookup file."""
+    base = Path(__file__).resolve()
+    return [
+        base.parents[2] / "taxi_zone_lookup.csv",  # repo root
+        base.parents[1] / "taxi_zone_lookup.csv",  # src sibling
+        Path.cwd() / "taxi_zone_lookup.csv",       # current working dir
+    ]
+
+
+def _load_zone_table() -> List[Dict[str, Any]]:
+    """
+    Load taxi zone lookup rows with borough information.
+
+    Returns:
+        List of dict rows from taxi_zone_lookup.csv (may be empty if file missing)
+    """
+    for path in _possible_lookup_paths():
+        if path.exists():
+            try:
+                with open(path, "r", newline="") as f:
+                    reader = csv.DictReader(f)
+                    return [row for row in reader if 'Zone' in row and 'LocationID' in row]
+            except Exception as exc:
+                print(f"Error loading zones from {path}: {exc}")
+    return []
+
+
+def _sample_location(zone_table: List[Dict[str, Any]]) -> Location:
+    """
+    Sample a plausible NYC location from the lookup table.
+    
+    Uses zone-specific centroids when available to ensure coordinates
+    fall on land rather than in water bodies.
+    """
+    if zone_table:
+        zone_row = random.choice(zone_table)
+        zone_id = int(zone_row.get('LocationID', 0))
+        borough = zone_row.get('Borough', 'Manhattan')
+        
+        # Use centralized zone coordinate lookup with small jitter
+        lat, lon = get_zone_coordinate(zone_id, borough, jitter=0.002)
+        
+        return Location(
+            latitude=lat,
+            longitude=lon,
+            zone_id=zone_id,
+            zone_name=zone_row.get('Zone')
+        )
+
+    # Fallback to Manhattan center if lookup failed
+    base_lat, base_lon = get_borough_center('Manhattan')
+    return Location(
+        latitude=base_lat + random.uniform(-0.005, 0.005),
+        longitude=base_lon + random.uniform(-0.005, 0.005)
+    )
+
 
 class RandomBaselineAgent(WhiteAgentBase):
     """
@@ -33,6 +96,7 @@ class RandomBaselineAgent(WhiteAgentBase):
     
     def __init__(self, agent_name: str = "RandomBaseline", config: Optional[Dict[str, Any]] = None):
         super().__init__(agent_name, config)
+        self.zone_table = _load_zone_table()
         
     def parse_request(
         self,
@@ -42,15 +106,20 @@ class RandomBaselineAgent(WhiteAgentBase):
         """
         Returns a request with placeholder locations.
         """
-        # Randomly decide if we "parsed" it or not (to simulate noise)
-        # But for a baseline, maybe just return a valid but empty request is better
-        # to ensure the pipeline keeps moving.
+        pickup = _sample_location(self.zone_table)
+        dropoff = _sample_location(self.zone_table)
+
+        # Make sure pickup and dropoff are not identical
+        attempts = 0
+        while dropoff.zone_id == pickup.zone_id and attempts < 3 and len(self.zone_table) > 1:
+            dropoff = _sample_location(self.zone_table)
+            attempts += 1
         
         return StructuredRequest(
             request_id=nl_request.request_id,
             request_time=nl_request.request_time,
-            origin=Location(latitude=40.75, longitude=-73.98), # Rough center of NYC
-            destination=Location(latitude=40.75, longitude=-73.98),
+            origin=pickup,
+            destination=dropoff,
             passenger_count=1
         )
 
@@ -93,6 +162,98 @@ class RandomBaselineAgent(WhiteAgentBase):
         return 1.0, 5.0
 
 
+class NearestVehicleBaselineAgent(WhiteAgentBase):
+    """
+    A baseline that assigns the nearest available vehicle to the parsed origin.
+
+    It reuses ground truth when provided (for test runs) and otherwise samples
+    plausible NYC locations. This keeps deadhead miles low without extra logic.
+    """
+
+    def __init__(self, agent_name: str = "NearestVehicleBaseline", config: Optional[Dict[str, Any]] = None):
+        super().__init__(agent_name, config)
+        self.zone_table = _load_zone_table()
+
+    def parse_request(
+        self,
+        nl_request: NaturalLanguageRequest,
+        vehicle_database: 'VehicleDatabase'
+    ) -> StructuredRequest:
+        # Use ground truth if available to keep origin/dest realistic
+        if nl_request.ground_truth:
+            return nl_request.ground_truth
+
+        origin = _sample_location(self.zone_table)
+        dest = _sample_location(self.zone_table)
+        attempts = 0
+        while dest.zone_id == origin.zone_id and attempts < 3 and len(self.zone_table) > 1:
+            dest = _sample_location(self.zone_table)
+            attempts += 1
+
+        return StructuredRequest(
+            request_id=nl_request.request_id,
+            request_time=nl_request.request_time,
+            origin=origin,
+            destination=dest,
+            passenger_count=1
+        )
+
+    def make_routing_decision(
+        self,
+        structured_request: StructuredRequest,
+        vehicle_database: 'VehicleDatabase'
+    ) -> RoutingDecision:
+        # VehicleDatabase sorts by proximity when a location is provided
+        available = self.get_available_vehicles(
+            vehicle_database,
+            location=structured_request.origin,
+            max_count=5  # grab a few nearest to avoid None
+        )
+
+        if not available:
+            all_vehicles = vehicle_database.get_all_vehicles()
+            if not all_vehicles:
+                raise ValueError("No vehicles in database")
+            selected = all_vehicles[0]
+        else:
+            selected = available[0]
+
+        pickup_distance, pickup_minutes = self.query_distance_and_time(
+            selected.current_location,
+            structured_request.origin
+        )
+        trip_distance, trip_minutes = self.query_distance_and_time(
+            structured_request.origin,
+            structured_request.destination
+        )
+
+        est_pickup_time = structured_request.request_time + timedelta(minutes=pickup_minutes)
+        est_drop_time = est_pickup_time + timedelta(minutes=trip_minutes)
+
+        return RoutingDecision(
+            request_id=structured_request.request_id,
+            vehicle_id=selected.vehicle_id,
+            estimated_pickup_time=est_pickup_time,
+            estimated_dropoff_time=est_drop_time,
+            estimated_pickup_distance_miles=pickup_distance,
+            estimated_trip_distance_miles=trip_distance,
+            decision_rationale=f"Nearest vehicle {selected.vehicle_id} (est deadhead {pickup_distance:.2f} mi)"
+        )
+
+    def query_distance_and_time(
+        self,
+        origin: Location,
+        destination: Location
+    ) -> tuple[float, float]:
+        # Euclidean approximation; avoids extra dependencies
+        lat_diff = abs(destination.latitude - origin.latitude)
+        lon_diff = abs(destination.longitude - origin.longitude)
+        distance_degrees = (lat_diff ** 2 + lon_diff ** 2) ** 0.5
+        distance_miles = distance_degrees * 69.0
+        duration_minutes = (distance_miles / 25.0) * 60.0  # ~25 mph city speed
+        return distance_miles, duration_minutes
+
+
 class RegexBaselineAgent(WhiteAgentBase):
     """
     A baseline agent that uses simple regex and keyword matching.
@@ -104,33 +265,41 @@ class RegexBaselineAgent(WhiteAgentBase):
     
     def __init__(self, agent_name: str = "RegexBaseline", config: Optional[Dict[str, Any]] = None):
         super().__init__(agent_name, config)
-        self.zone_lookup = self._load_zones()
+        self.zone_table = _load_zone_table()
+        self.zone_lookup = {
+            row['Zone']: int(row['LocationID']) for row in self.zone_table
+            if 'Zone' in row and 'LocationID' in row
+        }
         self.zones = list(self.zone_lookup.keys())
-        
-    def _load_zones(self) -> Dict[str, int]:
-        """Load taxi zones from the CSV file in the root directory."""
-        zones = {}
-        # Assuming the agent is running from the root or we can find the file
-        # We'll try a few common paths
-        possible_paths = [
-            "taxi_zone_lookup.csv",
-            "../taxi_zone_lookup.csv",
-            "/Users/zhaozihao/Desktop/Agentic-AI/taxi_zone_lookup.csv" # Absolute path fallback
-        ]
-        
-        for path in possible_paths:
-            if os.path.exists(path):
-                try:
-                    with open(path, 'r') as f:
-                        reader = csv.DictReader(f)
-                        for row in reader:
-                            if 'Zone' in row and 'LocationID' in row:
-                                zones[row['Zone']] = int(row['LocationID'])
-                    break
-                except Exception as e:
-                    print(f"Error loading zones from {path}: {e}")
-                    
-        return zones
+
+    def _get_zone_row(self, zone_id: Optional[int]) -> Optional[Dict[str, Any]]:
+        """Fetch the raw zone row for a given LocationID."""
+        if zone_id is None:
+            return None
+        for row in self.zone_table:
+            if int(row.get('LocationID')) == zone_id:
+                return row
+        return None
+
+    def _build_location_for_zone(self, zone_name: Optional[str]) -> Location:
+        """Create a Location using lookup info; fallback to random sample."""
+        if zone_name and zone_name in self.zone_lookup:
+            zone_id = self.zone_lookup[zone_name]
+            zone_row = self._get_zone_row(zone_id)
+            borough = zone_row.get('Borough', 'Manhattan') if zone_row else 'Manhattan'
+            
+            # Use centralized zone coordinate lookup
+            lat, lon = get_zone_coordinate(zone_id, borough, jitter=0.002)
+            
+            return Location(
+                latitude=lat,
+                longitude=lon,
+                zone_name=zone_name,
+                zone_id=zone_id
+            )
+
+        # Fallback to a random location to avoid collapsed trajectories
+        return _sample_location(self.zone_table)
 
     def _normalize(self, text: str) -> str:
         """Normalize text by replacing punctuation with spaces and lowercasing."""
@@ -202,13 +371,15 @@ class RegexBaselineAgent(WhiteAgentBase):
                     dest_zone = found_zones[1]
         
         # Create locations
-        # We use 0.0, 0.0 as lat/long but provide the zone name and ID
-        origin_id = self.zone_lookup.get(origin_zone) if origin_zone else None
-        dest_id = self.zone_lookup.get(dest_zone) if dest_zone else None
-        
-        origin_loc = Location(latitude=40.75, longitude=-73.98, zone_name=origin_zone, zone_id=origin_id)
-        dest_loc = Location(latitude=40.75, longitude=-73.98, zone_name=dest_zone, zone_id=dest_id)
-        
+        origin_loc = self._build_location_for_zone(origin_zone)
+        dest_loc = self._build_location_for_zone(dest_zone)
+
+        # If we failed to find distinct zones, sample a different dropoff to keep maps informative
+        if dest_loc.zone_id == origin_loc.zone_id and len(self.zone_table) > 1:
+            alt_dest = _sample_location(self.zone_table)
+            if alt_dest.zone_id != origin_loc.zone_id:
+                dest_loc = alt_dest
+
         return StructuredRequest(
             request_id=nl_request.request_id,
             request_time=nl_request.request_time,

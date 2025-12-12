@@ -15,7 +15,7 @@ def test_file_upload_security():
     print("🔒 Testing File Upload Security Measures...")
     print("="*60)
     
-    base_url = "http://localhost:9000"
+    base_url = "http://localhost:39000"
     battle_id = "security_test_battle"
     
     # Test 1: Malicious filename with path traversal
@@ -226,7 +226,7 @@ def test_static_asset_security():
     print("\n🔒 Testing Static Asset Security...")
     print("="*60)
     
-    base_url = "http://localhost:9000"
+    base_url = "http://localhost:39000"
     
     # Test 1: Path traversal in static assets
     print("\n1. Testing static asset path traversal...")
@@ -308,7 +308,7 @@ def main():
             return False
             
     except requests.exceptions.ConnectionError:
-        print("✗ Could not connect to server. Make sure the backend is running on localhost:9000")
+        print("✗ Could not connect to server. Make sure the backend is running on localhost:39000")
         return False
     except Exception as e:
         print(f"✗ Security test failed: {str(e)}")

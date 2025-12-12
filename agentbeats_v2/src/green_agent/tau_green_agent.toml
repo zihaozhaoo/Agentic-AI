@@ -1,0 +1,15 @@
+name = "ride_green_agent"
+description = "Green agent orchestrating ride-hailing baseline evaluation"
+version = "2.0.0"
+url = "http://localhost:9101"
+default_input_modes = ["text/plain"]
+default_output_modes = ["text/plain"]
+
+[capabilities]
+
+[[skills]]
+id = "ride_eval"
+name = "Ride Evaluation"
+description = "Runs ride-hailing baseline evaluation and returns metrics."
+tags = ["evaluation", "orchestration"]
+examples = []

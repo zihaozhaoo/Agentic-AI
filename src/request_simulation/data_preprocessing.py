@@ -386,6 +386,10 @@ class NYCTripDataPreprocessor:
         arrival_constraint_pct = (df['has_arrival_constraint'].sum() / len(df)) * 100 if 'has_arrival_constraint' in df.columns else 0
         print(f"  {arrival_constraint_pct:.1f}% of requests have arrival time constraints")
 
+        # Shuffle to remove any spatial/temporal ordering bias from the source file
+        df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+        print("Shuffled records to avoid location/time clustering")
+
         if save_dir:
             Path(save_dir).mkdir(parents=True, exist_ok=True)
             output_path = Path(save_dir) / 'preprocessed_trips.parquet'

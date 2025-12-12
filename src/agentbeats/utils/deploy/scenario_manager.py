@@ -458,7 +458,7 @@ class ScenarioManager:
         return scenarios
     
 
-    def register_agent_to_backend(self, agent: ScenarioAgent, backend_url: str = "http://localhost:9000") -> Optional[str]:
+    def register_agent_to_backend(self, agent: ScenarioAgent, backend_url: str = "http://localhost:39000") -> Optional[str]:
         """Register a single agent to the backend and return agent_id"""
         max_retries = 3
         retry_delay = 5  # seconds
@@ -512,7 +512,7 @@ class ScenarioManager:
 
     def register_agents_to_backend(
         self,
-        backend_url: str = "http://localhost:9000",
+        backend_url: str = "http://localhost:39000",
     ):
         """
         Register all agents to the backend
@@ -535,7 +535,7 @@ class ScenarioManager:
         return agent_id_map, green_agent_id
 
 
-    def create_battle(self, green_agent_id: str, opponents: List[Dict[str, str]], backend_url: str = "http://localhost:9000") -> Optional[str]:
+    def create_battle(self, green_agent_id: str, opponents: List[Dict[str, str]], backend_url: str = "http://localhost:39000") -> Optional[str]:
         """Create a battle and return battle_id"""
         try:
             battle_data = {

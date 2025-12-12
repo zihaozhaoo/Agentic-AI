@@ -10,13 +10,13 @@ export default defineConfig({
 	server: {
     proxy: {
       '/api': {
-        target: process.env.BACKEND_URL || 'http://localhost:9000',
+        target: process.env.BACKEND_URL || 'http://localhost:39000',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, '')
       },
       '/ws': {
-        target: (process.env.BACKEND_URL || 'http://localhost:9000').replace(/^http/, 'ws'),
+        target: (process.env.BACKEND_URL || 'http://localhost:39000').replace(/^http/, 'ws'),
         ws: true,
         changeOrigin: true,
         secure: false

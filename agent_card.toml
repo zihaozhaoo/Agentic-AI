@@ -3,7 +3,7 @@ description = """
 You are a baseline agent for the Agentic-AI ride hailing system.
 You parse natural language ride requests into structured data using regex and keyword matching.
 """
-url = "http://localhost:8001"
+url = "http://localhost:38001"
 version = "1.0.0"
 
 defaultInputModes = ["text"]

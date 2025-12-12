@@ -10,8 +10,15 @@ import json
 from pathlib import Path
 import random
 import time
+from tqdm import tqdm
 
 from request_simulation import RequestSimulator
+from request_simulation.zone_coordinates import (
+    get_zone_coordinate,
+    get_borough_bounds,
+    get_borough_center,
+    BOROUGH_LAND_BOUNDS
+)
 from white_agent import WhiteAgentBase, NaturalLanguageRequest, StructuredRequest, Location
 from vehicle_system import VehicleDatabase, VehicleSimulator, Vehicle
 from evaluation import Evaluator
@@ -64,6 +71,8 @@ class GreenAgentEnvironment:
 
         # Request tracking
         self.processed_requests: List[Dict[str, Any]] = []
+        # Keep active assignments so vehicles stay busy until simulated completion
+        self.active_assignments: Dict[str, Dict[str, Any]] = {}
 
     def initialize_vehicles(
         self,
@@ -71,7 +80,8 @@ class GreenAgentEnvironment:
         zone_distribution: Optional[Dict[int, float]] = None,
         wheelchair_accessible_ratio: float = 0.1,
         sample_parquet_path: Optional[str] = None,
-        sample_size: int = 1000
+        sample_size: int = 1000,
+        prefer_uniform_distribution: bool = True
     ):
         """
         Initialize the vehicle fleet.
@@ -82,15 +92,24 @@ class GreenAgentEnvironment:
             wheelchair_accessible_ratio: Ratio of wheelchair accessible vehicles
             sample_parquet_path: Optional path to sample trip data for realistic locations
             sample_size: Number of trips to sample for location distribution
+            prefer_uniform_distribution: If True, seed vehicles evenly across taxi zones to avoid
+                clustering around historical hotspots.
         """
         print(f"Initializing {num_vehicles} vehicles...")
 
         # Get taxi zone lookup from request simulator
         taxi_zone_lookup = self.request_simulator.preprocessor.zone_lookup
 
-        # Sample initial locations from actual trip data if provided
+        # Default to an even zone distribution to keep the starting fleet spread out
+        zone_distribution = zone_distribution or self._build_uniform_zone_distribution(taxi_zone_lookup)
+
+        # Seed initial locations evenly across taxi zones when requested
         initial_locations = None
-        if sample_parquet_path:
+        if prefer_uniform_distribution:
+            initial_locations = self._generate_even_initial_locations(num_vehicles, taxi_zone_lookup)
+
+        # Optionally sample initial locations from historical trips if uniform seeding is disabled
+        if sample_parquet_path and initial_locations is None:
             print(f"  - Sampling {sample_size} trips for realistic vehicle locations...")
             try:
                 import pandas as pd
@@ -165,7 +184,9 @@ class GreenAgentEnvironment:
         requests: List[Dict[str, Any]],
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
-        verbose: bool = True
+        verbose: bool = True,
+        map_output_dir: Optional[str] = None,
+        inter_request_delay_seconds: float = 0.0
     ) -> Dict[str, Any]:
         """
         Run complete evaluation of a white agent.
@@ -176,6 +197,7 @@ class GreenAgentEnvironment:
             start_time: Simulation start time (uses first request time if None)
             end_time: Simulation end time (uses last request time if None)
             verbose: Whether to print progress
+            map_output_dir: Optional path; if provided, export trajectories JSON and an interactive HTML map
 
         Returns:
             Dictionary with evaluation results
@@ -183,16 +205,21 @@ class GreenAgentEnvironment:
         if not requests:
             raise ValueError("No requests provided for evaluation")
 
-        # Set simulation time bounds
-        self.simulation_start_time = start_time or requests[0]['request_time']
-        self.simulation_end_time = end_time or requests[-1]['request_time']
+        # Sort requests chronologically so the simulator can advance and keep vehicles busy
+        requests_sorted = sorted(requests, key=lambda r: self._to_datetime(r.get('request_time')))
+
+        # Set simulation time bounds and clear any previous run state
+        self.simulation_start_time = start_time or self._to_datetime(requests_sorted[0].get('request_time'))
+        last_request_time = self._to_datetime(requests_sorted[-1].get('request_time'))
+        self.simulation_end_time = end_time or (last_request_time + timedelta(minutes=120))
         self.current_time = self.simulation_start_time
+        self.active_assignments.clear()
 
         if verbose:
             print("\n" + "="*80)
             print(f"STARTING EVALUATION: {white_agent.agent_name}")
             print("="*80)
-            print(f"  Total requests: {len(requests)}")
+            print(f"  Total requests: {len(requests_sorted)}")
             print(f"  Start time: {self.simulation_start_time}")
             print(f"  End time: {self.simulation_end_time}")
             print(f"  Fleet size: {len(self.vehicle_database)}")
@@ -206,18 +233,30 @@ class GreenAgentEnvironment:
                 num_vehicles=len(self.vehicle_database),
                 start_time=self.simulation_start_time
             )
+            # Snapshot initial fleet state for timeline visualizations.
+            for vehicle in self.vehicle_database.get_all_vehicles():
+                self.logger.log_vehicle_initialization(
+                    vehicle_id=vehicle.vehicle_id,
+                    location={
+                        'latitude': vehicle.current_location.latitude,
+                        'longitude': vehicle.current_location.longitude,
+                        'zone_id': vehicle.current_location.zone_id,
+                        'zone_name': vehicle.current_location.zone_name,
+                    },
+                    wheelchair_accessible=vehicle.wheelchair_accessible
+                )
 
         # Reset evaluator
         self.evaluator.reset()
         self.processed_requests.clear()
 
         # Process each request
-        for i, request_data in enumerate(requests):
+        for i, request_data in tqdm(enumerate(requests_sorted), total=len(requests_sorted)):
             # Convert to NaturalLanguageRequest
             nl_request = self._convert_to_nl_request(request_data)
 
-            # Update simulation time
-            self.current_time = nl_request.request_time
+            # Advance simulation to the current request time to update busy vehicles/trips
+            self._advance_to_time(nl_request.request_time)
 
             # Log request arrival
             self.logger.log_request_arrival(
@@ -228,7 +267,7 @@ class GreenAgentEnvironment:
             )
 
             if verbose and (i + 1) % 50 == 0:
-                print(f"  Processing request {i + 1} / {len(requests)}...")
+                print(f"  Processing request {i + 1} / {len(requests_sorted)}...")
 
             # Process request through white agent
             try:
@@ -262,6 +301,7 @@ class GreenAgentEnvironment:
                     self.logger.log_vehicle_assignment(
                         vehicle_id=routing_decision.vehicle_id,
                         request_id=nl_request.request_id,
+                        assignment_time=self.current_time,
                         current_location={
                             'latitude': vehicle.current_location.latitude,
                             'longitude': vehicle.current_location.longitude
@@ -282,40 +322,17 @@ class GreenAgentEnvironment:
                     self.current_time
                 )
 
-                # Simulate trip completion (simplified - instant completion for now)
-                trip_result = self.vehicle_simulator.simulate_trip_completion(
-                    nl_request.request_id,
-                    self.current_time + timedelta(minutes=30)  # Placeholder
-                )
+                # Ensure the routing execution succeeded before tracking as active
+                if not execution_result.get('success', True):
+                    raise RuntimeError(execution_result.get('error', 'Vehicle execution failed'))
 
-                # Log trip completion
-                if trip_result:
-                    self.logger.log_trip_completion(
-                        vehicle_id=routing_decision.vehicle_id,
-                        request_id=nl_request.request_id,
-                        trip_distance=trip_result.get('trip_distance', 0),
-                        trip_time=trip_result.get('trip_time', 0),
-                        fare=trip_result.get('fare', 0),
-                        deadhead_miles=trip_result.get('deadhead_miles', 0)
-                    )
-
-                # Evaluate request
-                self.evaluator.evaluate_request(
-                    nl_request,
-                    parsed_request,
-                    routing_decision,
-                    trip_result
-                )
-
-                # Track processed request
-                self.processed_requests.append({
-                    'request_id': nl_request.request_id,
-                    'success': True,
-                    'parsed_request': parsed_request.to_dict(),
-                    'routing_decision': routing_decision.to_dict(),
-                    'execution_result': execution_result,
-                    'trip_result': trip_result,
-                })
+                # Track assignment so the vehicle stays busy until the simulated dropoff completes
+                self.active_assignments[nl_request.request_id] = {
+                    'nl_request': nl_request,
+                    'parsed_request': parsed_request,
+                    'routing_decision': routing_decision,
+                    'execution_result': execution_result
+                }
 
             except Exception as e:
                 if verbose:
@@ -334,6 +351,24 @@ class GreenAgentEnvironment:
                     'error': str(e),
                 })
 
+            # Optional pacing between requests
+            if inter_request_delay_seconds > 0 and (i + 1) < len(requests_sorted):
+                time.sleep(inter_request_delay_seconds)
+
+        # Advance through the remaining horizon to complete outstanding trips
+        self._advance_to_time(self.simulation_end_time)
+
+        # Force-complete any residual trips that exceeded the horizon
+        if self.active_assignments:
+            for request_id in list(self.active_assignments.keys()):
+                forced_result = self.vehicle_simulator.simulate_trip_completion(
+                    request_id,
+                    self.simulation_end_time
+                )
+                if forced_result:
+                    self._finalize_completed_trip(forced_result)
+            self.active_assignments.clear()
+
         # Get final evaluation summary
         evaluation_summary = self.evaluator.get_summary()
 
@@ -350,6 +385,23 @@ class GreenAgentEnvironment:
             print("="*80)
             self._print_summary(evaluation_summary)
 
+        # Optional map/trajectory export
+        if map_output_dir:
+            viz_paths = self.export_visualizations(map_output_dir)
+            # Also persist full event log for debugging/analysis
+            try:
+                self.logger.save_json_log(str(Path(map_output_dir) / "events.json"))
+            except Exception as log_exc:
+                self.logger.log_error(
+                    error_type="EVENT_LOG_SAVE_ERROR",
+                    error_message=str(log_exc),
+                    context={"output_dir": map_output_dir},
+                )
+            if verbose:
+                print(f"\nVisualization exported:")
+                print(f"  - Trajectories JSON: {viz_paths['trajectories_json']}")
+                print(f"  - HTML map:          {viz_paths['map_html']}")
+
         return {
             'agent_name': white_agent.agent_name,
             'evaluation_summary': evaluation_summary,
@@ -365,7 +417,10 @@ class GreenAgentEnvironment:
         self,
         parquet_path: str,
         n_requests: int = 100,
-        augment_location: bool = False
+        augment_location: bool = False,
+        mean_interarrival_seconds: Optional[float] = 15.0,
+        start_time: Optional[datetime] = None,
+        uniform_zone_sampling: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Generate requests from trip data.
@@ -375,7 +430,10 @@ class GreenAgentEnvironment:
         Args:
             parquet_path: Path to parquet file with trip data
             n_requests: Number of requests to generate
-            augment_location: Whether to augment with exact coordinates
+            augment_location: Whether to augment with exact coordinates (defaults to False to avoid external APIs)
+            mean_interarrival_seconds: Target mean interarrival time to control demand intensity
+            start_time: Optional fixed start time for the generated timeline
+            uniform_zone_sampling: Whether to flatten pickup distribution across taxi zones
 
         Returns:
             List of request dictionaries
@@ -394,7 +452,10 @@ class GreenAgentEnvironment:
         requests = self.request_simulator.simulate_requests(
             df,
             n_requests=n_requests,
-            augment_location=augment_location
+            augment_location=augment_location,
+            mean_interarrival_seconds=mean_interarrival_seconds,
+            start_time=start_time,
+            uniform_zone_sampling=uniform_zone_sampling
         )
 
         return requests
@@ -422,40 +483,90 @@ class GreenAgentEnvironment:
 
         print(f"\nResults saved to {output_path}")
 
+    def _build_uniform_zone_distribution(self, taxi_zone_lookup) -> Dict[int, float]:
+        """
+        Build a uniform distribution over taxi zones to start vehicles evenly.
+
+        Args:
+            taxi_zone_lookup: DataFrame containing LocationID entries
+
+        Returns:
+            Dictionary mapping zone_id to equal weight
+        """
+        # Spread probability mass uniformly across all valid LocationIDs
+        distribution: Dict[int, float] = {}
+        for zone_id in taxi_zone_lookup.get('LocationID', []):
+            try:
+                distribution[int(zone_id)] = 1.0
+            except (TypeError, ValueError):
+                continue
+        return distribution or {1: 1.0}
+
+    def _generate_even_initial_locations(
+        self,
+        num_vehicles: int,
+        taxi_zone_lookup
+    ) -> List[Location]:
+        """
+        Generate initial vehicle locations that cycle through taxi zones to avoid clustering.
+
+        Uses zone-specific centroids when available, otherwise samples from land-only
+        borough bounds to prevent vehicles from spawning in water.
+
+        Args:
+            num_vehicles: Fleet size
+            taxi_zone_lookup: DataFrame of zone metadata
+
+        Returns:
+            List of Location objects covering the zone catalog
+        """
+        # Cycle through zones so every zone is represented before repeating
+        zone_records = taxi_zone_lookup[['LocationID', 'Borough', 'Zone']].dropna(subset=['LocationID']).to_dict('records')
+        if not zone_records:
+            return []
+
+        locations: List[Location] = []
+        for idx in range(num_vehicles):
+            zone = zone_records[idx % len(zone_records)]
+            zone_id = int(zone.get('LocationID', 0))
+            borough = zone.get('Borough', 'Manhattan')
+
+            # Use zone-specific coordinate with small jitter to spread vehicles
+            lat, lon = get_zone_coordinate(zone_id, borough, jitter=0.003)
+
+            locations.append(Location(
+                latitude=lat,
+                longitude=lon,
+                zone_id=zone_id,
+                zone_name=zone.get('Zone', 'Unknown')
+            ))
+
+        # Shuffle so early assignments are not biased toward any borough/zone
+        random.shuffle(locations)
+        return locations
+
     def _get_zone_center(self, zone_id: int, zone_name: str = None) -> tuple[float, float]:
         """
         Get approximate center coordinates for a taxi zone.
+
+        Uses zone-specific centroids when available, otherwise falls back to
+        land-only borough sampling to prevent points falling in water.
 
         Args:
             zone_id: Taxi zone ID
             zone_name: Optional zone name for fallback
 
         Returns:
-            (latitude, longitude) tuple
+            (latitude, longitude) tuple guaranteed to be on land
         """
-        # Borough-based zone centers (approximate)
-        borough_centers = {
-            'Manhattan': (40.7589, -73.9851),
-            'Brooklyn': (40.6782, -73.9442),
-            'Queens': (40.7282, -73.7949),
-            'Bronx': (40.8448, -73.8648),
-            'Staten Island': (40.5795, -74.1502),
-            'EWR': (40.6895, -74.1745),  # Newark Airport
-        }
-
-        # Try to get borough from zone lookup
+        # Try to get borough from zone lookup for fallback
+        borough = None
         try:
             zone_lookup = self.request_simulator.preprocessor.zone_lookup
             zone_info = zone_lookup[zone_lookup['LocationID'] == zone_id]
 
             if len(zone_info) > 0:
-                borough = zone_info.iloc[0].get('Borough', 'Unknown')
-                if borough in borough_centers:
-                    center = borough_centers[borough]
-                    # Add small random offset to spread vehicles
-                    lat = center[0] + random.uniform(-0.01, 0.01)
-                    lon = center[1] + random.uniform(-0.01, 0.01)
-                    return lat, lon
+                borough = zone_info.iloc[0].get('Borough', 'Manhattan')
         except Exception as e:
             self.logger.log_error(
                 error_type='ZONE_CENTER_LOOKUP_ERROR',
@@ -463,8 +574,8 @@ class GreenAgentEnvironment:
                 context={'zone_id': zone_id}
             )
 
-        # Default: NYC center (Times Square area)
-        return 40.7589 + random.uniform(-0.01, 0.01), -73.9851 + random.uniform(-0.01, 0.01)
+        # Use centralized zone coordinate lookup with small jitter
+        return get_zone_coordinate(zone_id, borough, jitter=0.002)
 
     def _convert_to_nl_request(self, request_data: Dict[str, Any]) -> NaturalLanguageRequest:
         """
@@ -543,12 +654,153 @@ class GreenAgentEnvironment:
             customer_id=request_data.get('customer_id'),
         )
 
+        request_time = self._to_datetime(request_data.get('request_time', datetime.now()))
+
         return NaturalLanguageRequest(
             request_id=str(request_data.get('trip_id', '')),
-            request_time=request_data.get('request_time', datetime.now()),
+            request_time=request_time,
             natural_language_text=nl_text,
             ground_truth=ground_truth
         )
+
+    def _advance_to_time(self, target_time: datetime):
+        """
+        Advance the simulator clock to a target time and finalize any completed trips.
+
+        Args:
+            target_time: Simulation timestamp to advance to
+        """
+        # Skip when the clock has not started yet
+        if self.current_time is None:
+            self.current_time = target_time
+            return
+
+        # Ignore requests that arrive earlier than the current clock to preserve causality
+        if target_time < self.current_time:
+            return
+
+        # Move the simulator forward and collect trips that finished in this window
+        time_delta = target_time - self.current_time
+        completed_trips = self.vehicle_simulator.advance_time(self.current_time, time_delta)
+        self.current_time = target_time
+
+        # Finalize completed trips so vehicles become available again
+        for trip_result in completed_trips:
+            self._finalize_completed_trip(trip_result)
+
+    def _finalize_completed_trip(self, trip_result: Dict[str, Any]):
+        """
+        Handle bookkeeping, logging, and evaluation when a trip finishes.
+
+        Args:
+            trip_result: Trip dictionary returned by the vehicle simulator
+        """
+        # Extract assignment context for evaluation/logging
+        request_id = trip_result.get('request_id')
+        assignment = self.active_assignments.pop(request_id, None)
+        if not assignment:
+            return
+
+        nl_request = assignment['nl_request']
+        parsed_request = assignment['parsed_request']
+        routing_decision = assignment['routing_decision']
+
+        # Emit trip completion log entry with pickup/dropoff positions
+        self.logger.log_trip_completion(
+            vehicle_id=routing_decision.vehicle_id,
+            request_id=nl_request.request_id,
+            trip_distance=trip_result.get('trip_distance', 0),
+            trip_time=trip_result.get('trip_time', 0),
+            fare=trip_result.get('fare', 0),
+            deadhead_miles=trip_result.get('deadhead_miles', 0),
+            pickup_time=trip_result.get('actual_pickup_time_timestamp'),
+            completion_time=trip_result.get('completion_time'),
+            pickup_location={
+                'latitude': parsed_request.origin.latitude,
+                'longitude': parsed_request.origin.longitude
+            },
+            dropoff_location={
+                'latitude': parsed_request.destination.latitude,
+                'longitude': parsed_request.destination.longitude
+            }
+        )
+
+        # Evaluate the request now that we have trip execution details
+        self.evaluator.evaluate_request(
+            nl_request,
+            parsed_request,
+            routing_decision,
+            trip_result
+        )
+
+        # Log per-request score to maintain parity with prior behavior
+        trip_miles = trip_result.get('trip_distance', 0)
+        deadhead_miles = trip_result.get('deadhead_miles', 0)
+        denom = trip_miles + deadhead_miles
+        trip_share = (trip_miles / denom) if denom > 0 else 0
+        parse_ok = self._is_parse_correct(parsed_request, nl_request)
+        per_request_score = (1.0 if parse_ok else 0.0) * trip_share
+        self.logger.log_event(
+            'REQUEST_SCORE',
+            {
+                'request_id': nl_request.request_id,
+                'score': per_request_score,
+                'trip_miles': trip_miles,
+                'deadhead_miles': deadhead_miles,
+                'parse_ok': parse_ok
+            }
+        )
+
+        # Track processed request outcome
+        self.processed_requests.append({
+            'request_id': nl_request.request_id,
+            'success': True,
+            'parsed_request': parsed_request.to_dict(),
+            'routing_decision': routing_decision.to_dict(),
+            'execution_result': assignment.get('execution_result'),
+            'trip_result': trip_result,
+        })
+
+    def _is_parse_correct(self, parsed_request: StructuredRequest, nl_request: NaturalLanguageRequest) -> bool:
+        """
+        Determine whether the parsed request matches the ground truth zones.
+
+        Args:
+            parsed_request: Structured request predicted by the white agent
+            nl_request: Original natural language request with ground truth
+
+        Returns:
+            True if both origin and destination zones are parsed correctly
+        """
+        if not nl_request.ground_truth:
+            return False
+
+        parse_ok = (
+            parsed_request.origin.zone_id == nl_request.ground_truth.origin.zone_id and
+            parsed_request.destination.zone_id == nl_request.ground_truth.destination.zone_id
+        )
+        return parse_ok
+
+    def _to_datetime(self, value: Any) -> datetime:
+        """
+        Normalize timestamp-like inputs to datetime objects.
+
+        Args:
+            value: Datetime, pandas Timestamp, or None
+
+        Returns:
+            Native datetime for consistent comparisons
+        """
+        if value is None:
+            return datetime.now()
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value)
+            except Exception:
+                return datetime.now()
+        if hasattr(value, "to_pydatetime"):
+            return value.to_pydatetime()
+        return value
 
     def _print_summary(self, summary: Dict[str, Any]):
         """Print evaluation summary."""
@@ -582,6 +834,42 @@ class GreenAgentEnvironment:
             return [self._make_serializable(item) for item in obj]
         else:
             return obj
+
+    def export_visualizations(
+        self,
+        output_dir: str,
+        map_filename: str = "trajectories_map.html",
+        trajectories_filename: str = "trajectories.json",
+        center_lat: float = 40.7589,
+        center_lon: float = -73.9851,
+        zoom: int = 11
+    ) -> Dict[str, str]:
+        """
+        Export trajectory data and an interactive HTML map animation.
+
+        Args:
+            output_dir: Directory to write files into
+            map_filename: HTML file name for the map
+            trajectories_filename: JSON file name for trajectory data
+            center_lat/center_lon: Map center (NYC by default)
+            zoom: Initial map zoom level
+
+        Returns:
+            Dict with paths to generated files.
+        """
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        trajectories_path = output_path / trajectories_filename
+        map_path = output_path / map_filename
+
+        self.logger.export_trajectories_json(str(trajectories_path))
+        self.logger.export_map_html(str(map_path), center_lat=center_lat, center_lon=center_lon, zoom=zoom)
+
+        return {
+            'trajectories_json': str(trajectories_path),
+            'map_html': str(map_path)
+        }
 
     def __repr__(self) -> str:
         return (f"GreenAgentEnvironment(vehicles={len(self.vehicle_database)}, "

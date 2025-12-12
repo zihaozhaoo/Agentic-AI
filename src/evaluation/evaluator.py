@@ -164,6 +164,8 @@ class Evaluator:
 
         # Store evaluations for detailed analysis
         self.request_evaluations: List[Dict[str, Any]] = []
+        # Per-request scores for overall aggregation
+        self.request_scores: List[float] = []
 
     def evaluate_parsing(
         self,
@@ -327,6 +329,15 @@ class Evaluator:
             'routing': routing_eval,
         })
 
+        # Custom per-request score: parse correctness * trip_share_of_total_miles
+        parse_ok = parsing_eval.get('origin_zone_correct') and parsing_eval.get('destination_zone_correct')
+        trip_miles = (trip_result or {}).get('trip_distance', 0.0)
+        deadhead_miles = (trip_result or {}).get('deadhead_miles', 0.0)
+        denom = trip_miles + deadhead_miles
+        share = (trip_miles / denom) if denom > 0 else 0.0
+        score = (1.0 if parse_ok else 0.0) * share
+        self.request_scores.append(score)
+
     def get_summary(self) -> Dict[str, Any]:
         """
         Get summary of all evaluations.
@@ -343,31 +354,15 @@ class Evaluator:
 
     def _calculate_overall_score(self) -> float:
         """
-        Calculate overall score combining parsing and routing.
-
-        This is a weighted score:
-        - 30% parsing accuracy
-        - 70% routing efficiency (net revenue)
+        Calculate overall score as the mean of per-request scores:
+        score_i = parse_correct * trip_miles / (trip_miles + deadhead_miles)
 
         Returns:
-            Overall score (0-100)
+            Overall score (0-100 scaled)
         """
-        # Parsing score (average of all accuracies)
-        parsing_score = (
-            self.parsing_metrics.origin_zone_accuracy +
-            self.parsing_metrics.destination_zone_accuracy +
-            self.parsing_metrics.time_constraint_accuracy +
-            self.parsing_metrics.special_requirements_accuracy
-        ) / 4.0 * 100.0
-
-        # Routing score (normalized net revenue)
-        # This is simplified - actual scoring should consider baseline comparisons
-        routing_score = max(0, min(100, self.routing_metrics.net_revenue / 10.0))
-
-        # Weighted combination
-        overall_score = 0.3 * parsing_score + 0.7 * routing_score
-
-        return overall_score
+        if not self.request_scores:
+            return 0.0
+        return (sum(self.request_scores) / len(self.request_scores)) * 100.0
 
     def _calculate_distance(
         self,
@@ -404,6 +399,7 @@ class Evaluator:
         self.parsing_metrics = ParsingMetrics()
         self.routing_metrics = RoutingMetrics()
         self.request_evaluations.clear()
+        self.request_scores.clear()
 
     def __repr__(self) -> str:
         summary = self.get_summary()

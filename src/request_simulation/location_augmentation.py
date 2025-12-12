@@ -21,6 +21,8 @@ import logging
 from pathlib import Path
 from dataclasses import dataclass, asdict
 
+from .zone_coordinates import get_zone_coordinate, get_borough_bounds, BOROUGH_LAND_BOUNDS
+
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -88,15 +90,6 @@ class LocationAugmenter:
 
         logger.info(f"Configuration: use_cache={use_cache}, origin_samples={num_origin_samples}, dest_samples={num_dest_samples}")
 
-        # Approximate bounding boxes for NYC boroughs (lat, lon ranges)
-        self.borough_bounds = {
-            'Manhattan': {'lat': (40.7, 40.88), 'lon': (-74.02, -73.91)},
-            'Brooklyn': {'lat': (40.57, 40.74), 'lon': (-74.05, -73.83)},
-            'Queens': {'lat': (40.54, 40.80), 'lon': (-73.96, -73.70)},
-            'Bronx': {'lat': (40.79, 40.92), 'lon': (-73.93, -73.75)},
-            'Staten Island': {'lat': (40.50, 40.65), 'lon': (-74.26, -74.05)},
-        }
-
         # Statistics tracking
         self.stats = {
             'total_api_calls': 0,
@@ -109,25 +102,28 @@ class LocationAugmenter:
     def _generate_random_point_in_zone(self, zone_id: int) -> Tuple[float, float]:
         """
         Generate a random lat/lon point within a taxi zone's approximate bounds.
+        
+        Uses zone-specific centroids when available, otherwise samples from
+        land-only borough bounds to prevent points falling in water.
 
         Args:
             zone_id: Taxi zone ID
 
         Returns:
-            Tuple of (latitude, longitude)
+            Tuple of (latitude, longitude) guaranteed to be on land
         """
         zone_info = self.zone_lookup[self.zone_lookup['LocationID'] == zone_id]
         if zone_info.empty:
             logger.warning(f"Zone {zone_id} not found in lookup, using NYC center")
-            # Default to NYC center
-            return (40.7589, -73.9851)
+            # Default to Times Square area (safe Manhattan location)
+            return (40.7580 + random.uniform(-0.002, 0.002), 
+                    -73.9855 + random.uniform(-0.002, 0.002))
 
         borough = zone_info.iloc[0]['Borough']
         zone_name = zone_info.iloc[0]['Zone']
-        bounds = self.borough_bounds.get(borough, self.borough_bounds['Manhattan'])
-
-        lat = random.uniform(bounds['lat'][0], bounds['lat'][1])
-        lon = random.uniform(bounds['lon'][0], bounds['lon'][1])
+        
+        # Use centralized zone coordinate lookup with moderate jitter for sampling
+        lat, lon = get_zone_coordinate(zone_id, borough, jitter=0.003)
 
         logger.debug(f"Generated random point for zone {zone_id} ({zone_name}, {borough}): ({lat:.4f}, {lon:.4f})")
         return (lat, lon)

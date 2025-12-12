@@ -87,7 +87,7 @@ def main():
 
     # Run
     # Port should match what's in the agent card or be configurable
-    port = 8001
+    port = int(os.environ.get("AGENT_PORT", "38001"))
     print(f"Starting agent on port {port}...")
     uvicorn.run(app, host="0.0.0.0", port=port)
 
