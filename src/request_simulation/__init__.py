@@ -17,6 +17,15 @@ from .location_augmentation import LocationAugmenter, ExactLocation
 from .template_generator import TemplateGenerator
 from .llm_generator import LLMGenerator
 from .request_simulator import RequestSimulator
+from .zone_coordinates import (
+    get_zone_coordinate,
+    get_borough_center,
+    get_borough_bounds,
+    sample_point_in_borough,
+    ZONE_CENTROIDS,
+    BOROUGH_LAND_BOUNDS,
+    BOROUGH_CENTERS
+)
 
 __all__ = [
     'NYCTripDataPreprocessor',
@@ -29,7 +38,15 @@ __all__ = [
     'ExactLocation',
     'TemplateGenerator',
     'LLMGenerator',
-    'RequestSimulator'
+    'RequestSimulator',
+    # Zone coordinates
+    'get_zone_coordinate',
+    'get_borough_center',
+    'get_borough_bounds',
+    'sample_point_in_borough',
+    'ZONE_CENTROIDS',
+    'BOROUGH_LAND_BOUNDS',
+    'BOROUGH_CENTERS'
 ]
 
 __version__ = '0.1.0'

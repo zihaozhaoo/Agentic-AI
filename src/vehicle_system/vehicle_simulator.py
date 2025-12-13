@@ -79,15 +79,26 @@ class VehicleSimulator:
                 'success': False,
                 'error': f'Vehicle {routing_decision.vehicle_id} not found'
             }
+        if not vehicle.is_available:
+            return {
+                'success': False,
+                'error': f'Vehicle {routing_decision.vehicle_id} is not idle (status={vehicle.status.value})'
+            }
 
         # Calculate actual pickup distance and time
         pickup_distance, pickup_time = self.distance_calculator(
             vehicle.current_location,
             pickup_location
         )
+        # Estimate trip leg distance/time
+        trip_distance, trip_time = self.distance_calculator(
+            pickup_location,
+            dropoff_location
+        )
 
         # Assign request to vehicle
         estimated_pickup_time = current_time + timedelta(minutes=pickup_time)
+        estimated_dropoff_time = estimated_pickup_time + timedelta(minutes=trip_time)
         vehicle.assign_request(
             request_id=routing_decision.request_id,
             destination=pickup_location,
@@ -102,8 +113,11 @@ class VehicleSimulator:
             'dropoff_location': dropoff_location,
             'request_time': current_time,
             'estimated_pickup_time': estimated_pickup_time,
+            'estimated_dropoff_time': estimated_dropoff_time,
             'actual_pickup_distance': pickup_distance,
             'actual_pickup_time': pickup_time,
+            'estimated_trip_distance': trip_distance,
+            'estimated_trip_time': trip_time,
             'status': 'en_route_to_pickup',
         }
 
@@ -115,6 +129,9 @@ class VehicleSimulator:
             'pickup_distance_miles': pickup_distance,
             'pickup_time_minutes': pickup_time,
             'estimated_pickup_time': estimated_pickup_time,
+            'estimated_dropoff_time': estimated_dropoff_time,
+            'estimated_trip_distance_miles': trip_distance,
+            'estimated_trip_time_minutes': trip_time,
         }
 
     def simulate_trip_completion(
@@ -180,43 +197,50 @@ class VehicleSimulator:
         self,
         current_time: datetime,
         time_delta: timedelta
-    ):
+    ) -> list[Dict[str, Any]]:
         """
-        Advance simulation time and update vehicle states.
-
-        This method simulates the passage of time and updates vehicles
-        that should reach their destinations.
+        Advance simulation time and update vehicle states, returning any completed trips.
 
         Args:
             current_time: Current simulation time
             time_delta: Time to advance
+
+        Returns:
+            List of trip completion records generated during this time advance.
         """
+        # Calculate the target timestamp we advance to
         new_time = current_time + time_delta
+        completed_trips: list[Dict[str, Any]] = []
 
-        # Check all active trips
+        # Walk through active trips and promote or finish them as time elapses
         for request_id, trip_info in list(self.active_trips.items()):
-            if trip_info['status'] == 'en_route_to_pickup':
-                # Check if vehicle reached pickup
-                if new_time >= trip_info['estimated_pickup_time']:
-                    vehicle = self.vehicle_database.get_vehicle_by_id(trip_info['vehicle_id'])
-                    if vehicle:
-                        # Start trip
-                        vehicle.start_trip(request_id)
-                        vehicle.update_location(trip_info['pickup_location'], new_time)
-                        trip_info['status'] = 'on_trip'
-                        trip_info['actual_pickup_time_timestamp'] = new_time
+            if trip_info['status'] == 'en_route_to_pickup' and new_time >= trip_info['estimated_pickup_time']:
+                vehicle = self.vehicle_database.get_vehicle_by_id(trip_info['vehicle_id'])
+                if vehicle:
+                    # Use the estimated pickup timestamp (not the current wall clock) to avoid
+                    # inflating pickup time when the simulator jumps between sparse requests.
+                    pickup_ts = trip_info['estimated_pickup_time']
+                    vehicle.start_trip(request_id)
+                    vehicle.update_location(trip_info['pickup_location'], pickup_ts)
+                    trip_info['status'] = 'on_trip'
+                    trip_info['actual_pickup_time_timestamp'] = pickup_ts
 
-                        # Calculate dropoff time
-                        _, trip_time = self.distance_calculator(
-                            trip_info['pickup_location'],
-                            trip_info['dropoff_location']
-                        )
-                        trip_info['estimated_dropoff_time'] = new_time + timedelta(minutes=trip_time)
+                    # Compute when the dropoff should occur based on travel time
+                    _, trip_time = self.distance_calculator(
+                        trip_info['pickup_location'],
+                        trip_info['dropoff_location']
+                    )
+                    trip_info['estimated_dropoff_time'] = pickup_ts + timedelta(minutes=trip_time)
 
-            elif trip_info['status'] == 'on_trip':
-                # Check if trip should be completed
-                if new_time >= trip_info.get('estimated_dropoff_time', new_time):
-                    self.simulate_trip_completion(request_id, new_time)
+            if trip_info['status'] == 'on_trip' and new_time >= trip_info.get('estimated_dropoff_time', new_time):
+                # Finish the trip at the planned dropoff time (not the later current time) to
+                # avoid stretching trip durations when the simulator advances in large jumps.
+                completion_time = trip_info.get('estimated_dropoff_time', new_time)
+                completion = self.simulate_trip_completion(request_id, completion_time)
+                if completion:
+                    completed_trips.append(completion)
+
+        return completed_trips
 
     def get_trip_status(self, request_id: str) -> Optional[Dict[str, Any]]:
         """

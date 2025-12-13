@@ -137,6 +137,7 @@ class EventLogger:
         self,
         vehicle_id: str,
         request_id: str,
+        assignment_time: datetime,
         current_location: Dict[str, Any],
         pickup_location: Dict[str, Any],
         estimated_pickup_distance: float,
@@ -146,6 +147,7 @@ class EventLogger:
         self.log_event('VEHICLE_ASSIGNMENT', {
             'vehicle_id': vehicle_id,
             'request_id': request_id,
+            'assignment_time': assignment_time.isoformat(),
             'current_location': current_location,
             'pickup_location': pickup_location,
             'estimated_pickup_distance_miles': estimated_pickup_distance,
@@ -179,6 +181,8 @@ class EventLogger:
         trip_time: float,
         fare: float,
         deadhead_miles: float,
+        pickup_time: Optional[datetime] = None,
+        completion_time: Optional[datetime] = None,
         pickup_location: Optional[Dict[str, Any]] = None,
         dropoff_location: Optional[Dict[str, Any]] = None
     ):
@@ -191,6 +195,8 @@ class EventLogger:
             'fare': fare,
             'deadhead_miles': deadhead_miles,
             'net_revenue': fare - (deadhead_miles * 0.50),
+            'pickup_time': pickup_time.isoformat() if pickup_time else None,
+            'completion_time': completion_time.isoformat() if completion_time else None,
             'pickup_location': pickup_location,
             'dropoff_location': dropoff_location
         })
@@ -323,6 +329,7 @@ class EventLogger:
         """
         assignments = {}
         trips = []
+        arrivals = {}
 
         for event in self.json_events:
             if event.event_type == 'VEHICLE_ASSIGNMENT':
@@ -330,10 +337,17 @@ class EventLogger:
                 rid = data.get('request_id')
                 assignments[rid] = {
                     'vehicle_id': data.get('vehicle_id'),
+                    'assignment_time': data.get('assignment_time'),
                     'vehicle_start': data.get('current_location'),
                     'pickup_location': data.get('pickup_location'),
                     'estimated_pickup_distance_miles': data.get('estimated_pickup_distance_miles'),
                     'estimated_pickup_time_minutes': data.get('estimated_pickup_time_minutes')
+                }
+            elif event.event_type == 'REQUEST_ARRIVAL':
+                data = event.event_data
+                rid = data.get('request_id')
+                arrivals[rid] = {
+                    'request_time': data.get('request_time'),
                 }
             elif event.event_type == 'TRIP_COMPLETE':
                 trips.append(event.event_data)
@@ -342,6 +356,7 @@ class EventLogger:
         for trip in trips:
             rid = trip.get('request_id')
             assignment = assignments.get(rid, {})
+            arrival = arrivals.get(rid, {})
 
             start_loc = assignment.get('vehicle_start')
             pickup_loc = assignment.get('pickup_location') or trip.get('pickup_location')
@@ -350,6 +365,10 @@ class EventLogger:
             trajectories.append({
                 'request_id': rid,
                 'vehicle_id': assignment.get('vehicle_id') or trip.get('vehicle_id'),
+                'request_time': arrival.get('request_time'),
+                'assignment_time': assignment.get('assignment_time'),
+                'pickup_time': trip.get('pickup_time'),
+                'completion_time': trip.get('completion_time'),
                 'vehicle_start': start_loc,
                 'pickup': pickup_loc,
                 'dropoff': dropoff_loc,
@@ -374,17 +393,20 @@ class EventLogger:
         zoom: int = 11
     ):
         """
-        Render an interactive HTML map that focuses on per-vehicle animation.
+        Render an interactive HTML map aligned to the simulation timeline.
 
-        This version keeps animation logic simple and reliable:
-        - One request plays at a time (vehicle_start -> pickup -> dropoff)
-        - "Play" starts/resumes sequential playback
-        - "Next" instantly completes the current leg/request and moves on
-        - Vehicle status list updates live (idle / to_pickup / occupied)
+        The playback uses the simulator-derived timestamps recorded in:
+        - VEHICLE_ASSIGNMENT.assignment_time
+        - TRIP_COMPLETE.pickup_time
+        - TRIP_COMPLETE.completion_time
+
+        The view advances a global simulation clock so multiple vehicles can be
+        simultaneously idle / en route / occupied.
         """
-        # Build trajectory data inline with durations and status cues
+        # Join assignments with completions into time-stamped trip records.
         assignments: Dict[str, Dict[str, Any]] = {}
         trips: List[Dict[str, Any]] = []
+        initial_vehicles: List[Dict[str, Any]] = []
 
         for event in self.json_events:
             if event.event_type == 'VEHICLE_ASSIGNMENT':
@@ -392,37 +414,47 @@ class EventLogger:
                 rid = data.get('request_id')
                 assignments[rid] = {
                     'vehicle_id': data.get('vehicle_id'),
+                    'assignment_time': data.get('assignment_time'),
                     'vehicle_start': data.get('current_location'),
                     'pickup': data.get('pickup_location'),
                     'eta_minutes': data.get('estimated_pickup_time_minutes'),
-                    'deadhead_distance_miles': data.get('estimated_pickup_distance_miles'),
                 }
             elif event.event_type == 'TRIP_COMPLETE':
                 trips.append(event.event_data)
+            elif event.event_type == 'VEHICLE_INIT':
+                data = event.event_data
+                vehicle_id = data.get('vehicle_id')
+                location = data.get('location')
+                if vehicle_id and location:
+                    initial_vehicles.append({
+                        'vehicle_id': vehicle_id,
+                        'location': location
+                    })
 
-        trajectories = []
+        trip_records: List[Dict[str, Any]] = []
         for trip in trips:
             rid = trip.get('request_id')
             assignment = assignments.get(rid, {})
 
-            deadhead_minutes = assignment.get('eta_minutes')
-            if deadhead_minutes is None:
-                dist = assignment.get('deadhead_distance_miles') or 2.0
-                deadhead_minutes = max(4.0, (dist / 18.0) * 60.0)  # ~18 mph city speed
+            vehicle_id = assignment.get('vehicle_id') or trip.get('vehicle_id')
+            start_loc = assignment.get('vehicle_start')
+            pickup_loc = assignment.get('pickup') or trip.get('pickup_location')
+            dropoff_loc = trip.get('dropoff_location')
 
-            trip_minutes = trip.get('trip_time_minutes')
-            if trip_minutes is None:
-                dist = trip.get('trip_distance_miles') or 2.5
-                trip_minutes = max(6.0, (dist / 18.0) * 60.0)
+            if not vehicle_id or not start_loc or not pickup_loc or not dropoff_loc:
+                continue
 
-            trajectories.append({
+            trip_records.append({
                 'request_id': rid,
-                'vehicle_id': assignment.get('vehicle_id') or trip.get('vehicle_id'),
-                'vehicle_start': assignment.get('vehicle_start'),
-                'pickup': assignment.get('pickup') or trip.get('pickup_location'),
-                'dropoff': trip.get('dropoff_location'),
-                'deadhead_minutes': deadhead_minutes,
-                'trip_minutes': trip_minutes,
+                'vehicle_id': vehicle_id,
+                'assignment_time': assignment.get('assignment_time'),
+                'pickup_time': trip.get('pickup_time'),
+                'completion_time': trip.get('completion_time'),
+                'eta_minutes': assignment.get('eta_minutes'),
+                'trip_time_minutes': trip.get('trip_time_minutes'),
+                'vehicle_start': start_loc,
+                'pickup': pickup_loc,
+                'dropoff': dropoff_loc,
                 'deadhead_miles': trip.get('deadhead_miles'),
                 'trip_miles': trip.get('trip_distance_miles'),
                 'fare': trip.get('fare'),
@@ -437,22 +469,29 @@ class EventLogger:
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     html, body, #map {{ height: 100%; margin: 0; padding: 0; }}
-    .controls {{ position: absolute; top: 10px; left: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.3); width: 260px; }}
+    .controls {{ position: absolute; top: 10px; left: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.3); width: 320px; }}
     .legend-item {{ display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 4px; }}
     .legend-swatch {{ width: 14px; height: 6px; border-radius: 3px; }}
     .status-list {{ max-height: 220px; overflow-y: auto; margin-top: 8px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; background: #fafafa; }}
     .status-entry {{ display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 2px 0; }}
     .totals {{ font-size: 12px; margin-top: 6px; }}
     button {{ margin-right: 6px; }}
+    .row {{ margin-top: 8px; }}
+    input[type="range"] {{ width: 100%; }}
   </style>
 </head>
 <body>
   <div id="map"></div>
   <div class="controls">
     <button id="playBtn">Play</button>
-    <button id="nextBtn">Next</button>
+    <button id="pauseBtn">Pause</button>
+    <button id="stepBtn">Step</button>
     <button id="resetBtn">Reset</button>
-    <div style="margin-top:6px; font-size: 12px;"><strong>Status:</strong> <span id="status">Idle</span></div>
+    <div class="row">
+      <input id="timeSlider" type="range" min="0" max="1000" value="0" />
+      <div style="margin-top:6px; font-size: 12px;"><strong>Sim time:</strong> <span id="timeLabel">-</span></div>
+    </div>
+    <div style="margin-top:6px; font-size: 12px;"><strong>Playback:</strong> <span id="status">Idle</span></div>
     <div style="margin-top:8px;">
       <div class="legend-item"><span class="legend-swatch" style="background:#ff3b30"></span>Deadhead (vehicle -> pickup)</div>
       <div class="legend-item"><span class="legend-swatch" style="background:#34c759"></span>On trip (pickup -> dropoff)</div>
@@ -461,191 +500,271 @@ class EventLogger:
     <div class="totals">
       <div id="deadheadTotal">Total deadhead: 0.0 mi</div>
       <div id="tripTotal">Total trip miles: 0.0 mi</div>
+      <div id="counts">Vehicles: 0 (idle 0 / to_pickup 0 / occupied 0)</div>
     </div>
     <div class="status-list" id="vehicleStatus"></div>
   </div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const trajectories = {json.dumps(trajectories)};
+    const initialVehicles = {json.dumps(initial_vehicles)};
+    const tripRecords = {json.dumps(trip_records)};
     const map = L.map('map').setView([{center_lat}, {center_lon}], {zoom});
     L.tileLayer('https://tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }}).addTo(map);
 
-    const layers = [];
     const markers = new Map(); // vehicle_id -> marker
     const statuses = new Map(); // vehicle_id -> status string
-    let idx = 0;
+    const polylines = new Map(); // vehicle_id -> current segment polyline
     let playing = false;
-    let skipRequested = false;
-    let rafId = null;
+    let timerId = null;
     const statusEl = document.getElementById('status');
     const statusListEl = document.getElementById('vehicleStatus');
-    const speedFactor = 120; // ms per simulated minute (lower = faster)
     const deadheadTotalEl = document.getElementById('deadheadTotal');
     const tripTotalEl = document.getElementById('tripTotal');
+    const countsEl = document.getElementById('counts');
+    const timeSlider = document.getElementById('timeSlider');
+    const timeLabel = document.getElementById('timeLabel');
 
     function setStatusText(text) {{
       statusEl.textContent = text;
     }}
 
-    function updateStatus(vehicleId, state, requestId) {{
-      statuses.set(vehicleId, state);
-      renderStatusList();
-      setStatusText("Vehicle " + vehicleId + ": " + state + " (req " + requestId + ")");
+    function parseIso(iso) {{
+      if (!iso) return null;
+      const ms = Date.parse(iso);
+      return Number.isFinite(ms) ? ms : null;
+    }}
+
+    function addMinutes(epochMs, minutes) {{
+      return epochMs + Math.round(minutes * 60 * 1000);
     }}
 
     function updateTotals() {{
-      const deadhead = trajectories.reduce((sum, t) => sum + (t.deadhead_miles || 0), 0);
-      const trips = trajectories.reduce((sum, t) => sum + (t.trip_miles || 0), 0);
+      const deadhead = tripRecords.reduce((sum, t) => sum + (t.deadhead_miles || 0), 0);
+      const trips = tripRecords.reduce((sum, t) => sum + (t.trip_miles || 0), 0);
       deadheadTotalEl.textContent = "Total deadhead: " + deadhead.toFixed(2) + " mi";
       tripTotalEl.textContent = "Total trip miles: " + trips.toFixed(2) + " mi";
     }}
 
     function renderStatusList() {{
-      const entries = Array.from(statuses.entries());
+      const entries = Array.from(statuses.entries()).sort((a, b) => a[0].localeCompare(b[0]));
       statusListEl.innerHTML = entries.map(([vid, state]) => {{
         const color = state === 'idle' ? '#6c757d' : state === 'to_pickup' ? '#ff3b30' : '#34c759';
         return '<div class="status-entry"><span class="legend-swatch" style="background:' + color + '"></span>' + vid + ' — ' + state + '</div>';
       }}).join('');
     }}
 
-    function ensureMarker(vehicleId, start) {{
-      if (!markers.has(vehicleId) && start) {{
-        const marker = L.circleMarker([start.latitude, start.longitude], {{
-          radius: 6,
+    const vehicles = new Map(); // vehicle_id -> {{ segments: [...], initial: Location }}
+
+    function ensureVehicle(vehicleId, initialLoc) {{
+      if (!vehicles.has(vehicleId)) {{
+        vehicles.set(vehicleId, {{ initial: initialLoc || null, segments: [] }});
+      }} else {{
+        const v = vehicles.get(vehicleId);
+        if (!v.initial && initialLoc) v.initial = initialLoc;
+      }}
+    }}
+
+    // Seed fleet so idle vehicles appear as well.
+    for (const v of initialVehicles) {{
+      ensureVehicle(v.vehicle_id, v.location);
+    }}
+
+    for (const rec of tripRecords) {{
+      const assignMs = parseIso(rec.assignment_time);
+      if (assignMs === null) continue;
+
+      let pickupMs = parseIso(rec.pickup_time);
+      if (pickupMs === null) {{
+        const eta = rec.eta_minutes == null ? 5.0 : Number(rec.eta_minutes);
+        pickupMs = addMinutes(assignMs, eta);
+      }}
+
+      let doneMs = parseIso(rec.completion_time);
+      if (doneMs === null) {{
+        const tm = rec.trip_time_minutes == null ? 8.0 : Number(rec.trip_time_minutes);
+        doneMs = addMinutes(pickupMs, tm);
+      }}
+
+      ensureVehicle(rec.vehicle_id, rec.vehicle_start);
+      const v = vehicles.get(rec.vehicle_id);
+      v.segments.push({{ t0: assignMs, t1: pickupMs, from: rec.vehicle_start, to: rec.pickup, state: 'to_pickup' }});
+      v.segments.push({{ t0: pickupMs, t1: doneMs, from: rec.pickup, to: rec.dropoff, state: 'occupied' }});
+    }}
+
+    let globalStart = null;
+    let globalEnd = null;
+    for (const v of vehicles.values()) {{
+      v.segments.sort((a, b) => a.t0 - b.t0);
+      if (v.segments.length > 0) {{
+        globalStart = globalStart === null ? v.segments[0].t0 : Math.min(globalStart, v.segments[0].t0);
+        globalEnd = globalEnd === null ? v.segments[v.segments.length - 1].t1 : Math.max(globalEnd, v.segments[v.segments.length - 1].t1);
+      }}
+    }}
+
+    function formatTime(ms) {{
+      return new Date(ms).toLocaleString();
+    }}
+
+    function ensureMarker(vehicleId, loc) {{
+      if (!markers.has(vehicleId) && loc) {{
+        const marker = L.circleMarker([loc.latitude, loc.longitude], {{
+          radius: 5,
           color: '#1e90ff',
           weight: 2,
           fillOpacity: 0.7
         }}).addTo(map).bindPopup("Vehicle " + vehicleId);
         markers.set(vehicleId, marker);
         statuses.set(vehicleId, 'idle');
-        renderStatusList();
       }}
     }}
 
-    function animateSegment(vehicleId, fromLoc, toLoc, minutes, color, done) {{
-      if (!fromLoc || !toLoc) {{
-        done();
-        return;
+    function interpolate(fromLoc, toLoc, t0, t1, t) {{
+      if (!fromLoc || !toLoc) return null;
+      if (t1 <= t0) return toLoc;
+      const p = Math.max(0, Math.min(1, (t - t0) / (t1 - t0)));
+      return {{
+        latitude: fromLoc.latitude + (toLoc.latitude - fromLoc.latitude) * p,
+        longitude: fromLoc.longitude + (toLoc.longitude - fromLoc.longitude) * p
+      }};
+    }}
+
+    function stateAtTime(v, t) {{
+      const segs = v.segments;
+      if (!segs || segs.length === 0) return {{ state: 'idle', loc: v.initial, seg: null }};
+      if (t < segs[0].t0) return {{ state: 'idle', loc: segs[0].from, seg: null }};
+      let active = null;
+      for (let i = 0; i < segs.length; i++) {{
+        if (segs[i].t0 <= t) active = segs[i];
+        else break;
       }}
-      const durationMs = Math.max(300, minutes * speedFactor);
-      const startLat = fromLoc.latitude;
-      const startLon = fromLoc.longitude;
-      const deltaLat = toLoc.latitude - startLat;
-      const deltaLon = toLoc.longitude - startLon;
+      if (!active) return {{ state: 'idle', loc: segs[0].from, seg: null }};
+      if (t <= active.t1) {{
+        return {{ state: active.state, loc: interpolate(active.from, active.to, active.t0, active.t1, t), seg: active }};
+      }}
+      return {{ state: 'idle', loc: active.to, seg: null }};
+    }}
 
-      const poly = L.polyline([[startLat, startLon], [toLoc.latitude, toLoc.longitude]], {{
-        color: color,
-        weight: 3,
-        opacity: 0.75
-      }}).addTo(map);
-      layers.push(poly);
-
+    function setVehicleVisual(vehicleId, state, loc, seg) {{
       const marker = markers.get(vehicleId);
-      const startTime = performance.now();
+      if (marker && loc) marker.setLatLng([loc.latitude, loc.longitude]);
+      statuses.set(vehicleId, state);
 
-      function step(now) {{
-        if (skipRequested) {{
-          skipRequested = false;
-          marker.setLatLng([toLoc.latitude, toLoc.longitude]);
-          done();
+      if (polylines.has(vehicleId)) {{
+        map.removeLayer(polylines.get(vehicleId));
+        polylines.delete(vehicleId);
+      }}
+      if (seg && seg.from && seg.to) {{
+        const color = state === 'to_pickup' ? '#ff3b30' : '#34c759';
+        const poly = L.polyline([[seg.from.latitude, seg.from.longitude], [seg.to.latitude, seg.to.longitude]], {{
+          color: color,
+          weight: 2,
+          opacity: 0.35
+        }}).addTo(map);
+        polylines.set(vehicleId, poly);
+      }}
+    }}
+
+    function updateCounts() {{
+      let idle = 0, toPickup = 0, occupied = 0;
+      for (const s of statuses.values()) {{
+        if (s === 'idle') idle++;
+        else if (s === 'to_pickup') toPickup++;
+        else occupied++;
+      }}
+      countsEl.textContent = "Vehicles: " + statuses.size + " (idle " + idle + " / to_pickup " + toPickup + " / occupied " + occupied + ")";
+    }}
+
+    function fracToTime(frac) {{
+      if (globalStart === null || globalEnd === null) return null;
+      const clamped = Math.max(0, Math.min(1, frac));
+      return Math.round(globalStart + clamped * (globalEnd - globalStart));
+    }}
+
+    function sliderToTime() {{
+      const frac = Number(timeSlider.value) / 1000;
+      return fracToTime(frac);
+    }}
+
+    function setTime(tMs) {{
+      if (tMs === null || globalStart === null || globalEnd === null) return;
+      const clamped = Math.max(globalStart, Math.min(globalEnd, tMs));
+      const frac = (clamped - globalStart) / (globalEnd - globalStart);
+      timeSlider.value = String(Math.round(frac * 1000));
+      timeLabel.textContent = formatTime(clamped);
+
+      for (const [vehicleId, v] of vehicles.entries()) {{
+        ensureMarker(vehicleId, v.initial || (v.segments[0] && v.segments[0].from));
+        const s = stateAtTime(v, clamped);
+        setVehicleVisual(vehicleId, s.state, s.loc, s.seg);
+      }}
+      renderStatusList();
+      updateCounts();
+    }}
+
+    function startPlayback() {{
+      if (playing || globalStart === null || globalEnd === null) return;
+      playing = true;
+      setStatusText('Playing');
+      const tickMs = 75;
+      const simStepMs = 15 * 1000; // 15 simulated seconds per tick
+      timerId = setInterval(() => {{
+        const t = sliderToTime();
+        if (t === null) return;
+        const next = t + simStepMs;
+        if (next >= globalEnd) {{
+          setTime(globalEnd);
+          stopPlayback();
+          setStatusText('Done');
           return;
         }}
-        const progress = Math.min(1, (now - startTime) / durationMs);
-        const lat = startLat + deltaLat * progress;
-        const lon = startLon + deltaLon * progress;
-        marker.setLatLng([lat, lon]);
-        if (progress < 1) {{
-          rafId = requestAnimationFrame(step);
-        }} else {{
-          done();
-        }}
-      }}
-
-      rafId = requestAnimationFrame(step);
+        setTime(next);
+      }}, tickMs);
     }}
 
-    function playTrajectory(traj, finished) {{
-      const vehicleId = traj.vehicle_id;
-      const reqId = traj.request_id;
-      if (!vehicleId || !traj.vehicle_start || !traj.pickup || !traj.dropoff) {{
-        finished();
-        return;
+    function stopPlayback() {{
+      playing = false;
+      if (timerId) {{
+        clearInterval(timerId);
+        timerId = null;
       }}
-
-      ensureMarker(vehicleId, traj.vehicle_start);
-      updateStatus(vehicleId, 'to_pickup', reqId);
-
-      animateSegment(vehicleId, traj.vehicle_start, traj.pickup, traj.deadhead_minutes || 5, '#ff3b30', () => {{
-        updateStatus(vehicleId, 'occupied', reqId);
-        animateSegment(vehicleId, traj.pickup, traj.dropoff, traj.trip_minutes || 8, '#34c759', () => {{
-          updateStatus(vehicleId, 'idle', reqId);
-          finished();
-        }});
-      }});
-    }}
-
-    function play() {{
-      if (idx >= trajectories.length) {{
-        setStatusText('Done');
-        playing = false;
-        return;
-      }}
-      playing = true;
-      setStatusText('Animating ' + (idx + 1) + ' / ' + trajectories.length);
-      playTrajectory(trajectories[idx], () => {{
-        idx += 1;
-        if (playing) {{
-          setTimeout(play, 150);
-        }}
-      }});
+      setStatusText('Paused');
     }}
 
     function reset() {{
-      if (rafId) {{
-        cancelAnimationFrame(rafId);
-        rafId = null;
-      }}
-      layers.forEach(l => map.removeLayer(l));
-      layers.length = 0;
-      markers.forEach(m => map.removeLayer(m));
+      stopPlayback();
+      for (const poly of polylines.values()) map.removeLayer(poly);
+      polylines.clear();
+      for (const m of markers.values()) map.removeLayer(m);
       markers.clear();
       statuses.clear();
-      idx = 0;
-      playing = false;
-      skipRequested = false;
-      setStatusText('Idle');
-      renderStatusList();
+      if (globalStart !== null) setTime(globalStart);
+      setStatusText('Ready');
     }}
 
-    document.getElementById('playBtn').onclick = () => {{
-      if (!playing) {{
-        play();
-      }}
+    document.getElementById('playBtn').onclick = () => startPlayback();
+    document.getElementById('pauseBtn').onclick = () => stopPlayback();
+    document.getElementById('stepBtn').onclick = () => {{
+      stopPlayback();
+      const t = sliderToTime();
+      if (t === null) return;
+      setTime(Math.min(globalEnd, t + 60 * 1000)); // +1 simulated minute
+    }};
+    document.getElementById('resetBtn').onclick = () => reset();
+    timeSlider.oninput = () => {{
+      stopPlayback();
+      setTime(sliderToTime());
     }};
 
-    document.getElementById('nextBtn').onclick = () => {{
-      if (!playing && idx < trajectories.length) {{
-        // start playback and immediately skip the first segment
-        skipRequested = true;
-        play();
-      }} else {{
-        skipRequested = true;
-      }}
-    }};
-
-    document.getElementById('resetBtn').onclick = reset;
-
-    // Seed markers so vehicles appear immediately
-    trajectories.forEach(t => {{
-      if (t.vehicle_id && t.vehicle_start) {{
-        ensureMarker(t.vehicle_id, t.vehicle_start);
-      }}
-    }});
-    renderStatusList();
     updateTotals();
+    if (globalStart === null) {{
+      setStatusText('No trips to display');
+    }} else {{
+      setTime(globalStart);
+      setStatusText('Ready');
+    }}
   </script>
 </body>
 </html>

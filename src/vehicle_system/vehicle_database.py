@@ -216,8 +216,15 @@ class VehicleDatabase:
 
             # Determine location
             if initial_locations and len(initial_locations) > 0:
-                # Best option: sample from actual trip locations
-                location = random.choice(initial_locations)
+                # Best option: round-robin through provided locations to avoid clustering
+                base = initial_locations[i % len(initial_locations)]
+                # Create a fresh Location with tiny jitter so vehicles do not overlap exactly
+                location = Location(
+                    latitude=base.latitude + random.uniform(-0.0008, 0.0008),
+                    longitude=base.longitude + random.uniform(-0.0008, 0.0008),
+                    zone_id=base.zone_id,
+                    zone_name=base.zone_name
+                )
             elif zone_distribution and taxi_zone_lookup is not None:
                 # Sample zone based on distribution
                 zone_id = self._sample_zone_from_distribution(zone_distribution)
