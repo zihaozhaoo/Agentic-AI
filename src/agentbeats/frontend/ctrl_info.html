@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controller Info - AgentBeats</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            color: white;
+            padding: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .controls {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .controls-left {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .controls-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .control-group input[type="number"] {
+            width: 80px;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .control-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #ff6b35;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #e85a2b;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 2px 6px rgba(245, 87, 108, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+            box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        .status-section {
+            padding: 20px 30px;
+            background: #fff;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ff6b35;
+        }
+
+        .status-card h3 {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .status-card .value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #212529;
+        }
+
+        .status-card pre {
+            font-size: 12px;
+            background: #2d2d2d;
+            color: #d4d4d4;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', Consolas, monospace;
+            line-height: 1.5;
+        }
+
+        .agents-section {
+            padding: 30px;
+        }
+
+        .agents-section h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #212529;
+        }
+
+        .agent-card {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            transition: box-shadow 0.2s;
+        }
+
+        .agent-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .agent-header {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .agent-header:hover {
+            background: #e9ecef;
+        }
+
+        .agent-id {
+            font-weight: 600;
+            font-size: 16px;
+            color: #212529;
+            font-family: 'Courier New', monospace;
+        }
+
+        .agent-name {
+            font-size: 14px;
+            color: #ff6b35;
+            margin-left: 8px;
+        }
+
+        .agent-summary {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .agent-url {
+            font-size: 12px;
+            color: #ff6b35;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background: rgba(255, 107, 53, 0.1);
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .agent-url:hover {
+            background: rgba(255, 107, 53, 0.2);
+            text-decoration: underline;
+        }
+
+        .agent-state {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .agent-state.running {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .agent-state.starting {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .agent-state.pending {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .agent-state.finished {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .agent-info {
+            font-size: 13px;
+            color: #6c757d;
+        }
+
+        .agent-header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .expand-icon {
+            transition: transform 0.2s;
+            color: #6c757d;
+        }
+
+        .expand-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .agent-details {
+            display: none;
+            background: #fff;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .agent-details.expanded {
+            display: block;
+        }
+
+        .agent-controls {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .agent-controls-left {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .agent-controls-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+
+        .detail-section {
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .detail-section:last-child {
+            border-bottom: none;
+        }
+
+        .detail-header {
+            padding: 12px 20px;
+            background: #f8f9fa;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .detail-header:hover {
+            background: #e9ecef;
+        }
+
+        .detail-header h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-header h4::before {
+            content: '';
+            width: 3px;
+            height: 16px;
+            background: #ff6b35;
+            border-radius: 2px;
+        }
+
+        .detail-content {
+            display: none;
+            padding: 20px;
+            background: #fff;
+        }
+
+        .detail-content.expanded {
+            display: block;
+        }
+
+        .detail-icon {
+            transition: transform 0.2s;
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        .detail-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', Consolas, monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            line-height: 1.5;
+        }
+
+        .log-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        .json-container {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+            font-family: 'Courier New', Consolas, monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.6;
+        }
+
+        .json-key {
+            color: #d81b60;
+        }
+
+        .json-string {
+            color: #388e3c;
+        }
+
+        .json-number {
+            color: #f57c00;
+        }
+
+        .json-boolean {
+            color: #0277bd;
+        }
+
+        .json-null {
+            color: #8e24aa;
+        }
+
+        .info-item {
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #ff6b35;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px;
+            border-left: 4px solid #f5c6cb;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Agent Controller - Info Panel</h1>
+        </div>
+
+        <div class="controls">
+            <div class="controls-left">
+                <div class="control-group">
+                    <input type="checkbox" id="globalAutoRefresh">
+                    <label for="globalAutoRefresh">Global auto-refresh every</label>
+                    <input type="number" id="globalRefreshInterval" value="5" min="1" max="60">
+                    <label for="globalRefreshInterval">seconds</label>
+                </div>
+            </div>
+            <div class="controls-right">
+                <button class="btn btn-primary" onclick="refreshGlobalData()">🔄 Refresh Now</button>
+            </div>
+        </div>
+
+        <div class="status-section" id="statusSection">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading controller status...</p>
+            </div>
+        </div>
+
+        <div class="agents-section" id="agentsSection">
+            <h2>Agent Instances</h2>
+            <div id="agentsList">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading agents...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let globalAutoRefreshInterval = null;
+        let agentsExpanded = {};
+        let detailsExpanded = {};
+        let agentAutoRefreshIntervals = {};
+        let logSizes = {};
+        let agentData = {};
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshGlobalData(true);
+
+            // Global auto-refresh checkbox handler
+            document.getElementById('globalAutoRefresh').addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    startGlobalAutoRefresh();
+                } else {
+                    stopGlobalAutoRefresh();
+                }
+            });
+
+            // Global refresh interval change handler
+            document.getElementById('globalRefreshInterval').addEventListener('change', () => {
+                if (document.getElementById('globalAutoRefresh').checked) {
+                    stopGlobalAutoRefresh();
+                    startGlobalAutoRefresh();
+                }
+            });
+        });
+
+        function startGlobalAutoRefresh() {
+            const interval = parseInt(document.getElementById('globalRefreshInterval').value) * 1000;
+            globalAutoRefreshInterval = setInterval(() => refreshGlobalData(false), interval);
+        }
+
+        function stopGlobalAutoRefresh() {
+            if (globalAutoRefreshInterval) {
+                clearInterval(globalAutoRefreshInterval);
+                globalAutoRefreshInterval = null;
+            }
+        }
+
+        async function refreshGlobalData() {
+            await Promise.all([
+                loadStatus(),
+                loadAgents()
+            ]);
+        }
+
+        async function loadStatus() {
+            const statusSection = document.getElementById('statusSection');
+            try {
+                const response = await fetch('/status');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                statusSection.innerHTML = `
+                    <div class="status-grid">
+                        <div class="status-card">
+                            <h3>Running Agent / Maintained Agent</h3>
+                            <div class="value">${data.running_agents}/${data.maintained_agents}</div>
+                        </div>
+                        <div class="status-card">
+                            <h3>Starting Command</h3>
+                            <pre>${escapeHtml(data.starting_command)}</pre>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                statusSection.innerHTML = `
+                    <div class="error">
+                        ❌ Failed to load status: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function loadAgents() {
+            const agentsList = document.getElementById('agentsList');
+            try {
+                const response = await fetch('/agents');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const agents = await response.json();
+
+                const agentIds = Object.keys(agents);
+                if (agentIds.length === 0) {
+                    agentsList.innerHTML = `
+                        <div class="empty-state">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                            </svg>
+                            <p>No agents found</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                for (const agentId of agentIds) {
+                    const agent = agents[agentId];
+                    const isExpanded = agentsExpanded[agentId] || false;
+
+                    html += `
+                        <div class="agent-card">
+                            <div class="agent-header" onclick="toggleAgent('${agentId}')" id="agent-header-${agentId}">
+                                <div>
+                                    <div class="agent-id" id="agent-id-${agentId}">${agentId}</div>
+                                    <div class="agent-summary">
+                                        <span class="agent-state ${getStateClass(agent.state)}">${agent.state}</span>
+                                        <span class="agent-info">Port: ${agent.internal_port}</span>
+                                        <a href="${agent.url}" class="agent-url" onclick="event.stopPropagation()" target="_blank">
+                                            🔗 ${agent.url}
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="agent-header-right">
+                                    <button class="btn btn-danger btn-sm" onclick="resetAgent(event, '${agentId}')">🔄 Reset</button>
+                                    <div class="expand-icon ${isExpanded ? 'expanded' : ''}">▼</div>
+                                </div>
+                            </div>
+                            <div class="agent-details ${isExpanded ? 'expanded' : ''}" id="details-${agentId}">
+                                ${isExpanded ? await loadAgentDetailsHTML(agentId) : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                agentsList.innerHTML = html;
+            } catch (error) {
+                agentsList.innerHTML = `
+                    <div class="error">
+                        ❌ Failed to load agents: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function resetAgent(event, agentId) {
+            event.stopPropagation();
+            if (!confirm(`Are you sure you want to reset agent ${agentId}?`)) {
+                return;
+            }
+            try {
+                const response = await fetch(`/agents/${agentId}/reset`, { method: 'POST' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                alert('Reset requested successfully');
+                await refreshGlobalData();
+            } catch (error) {
+                alert(`Failed to reset agent: ${error.message}`);
+            }
+        }
+
+        async function toggleAgent(agentId) {
+            agentsExpanded[agentId] = !agentsExpanded[agentId];
+            const detailsDiv = document.getElementById(`details-${agentId}`);
+            const expandIcon = detailsDiv.previousElementSibling.querySelector('.expand-icon');
+
+            if (agentsExpanded[agentId]) {
+                expandIcon.classList.add('expanded');
+                detailsDiv.classList.add('expanded');
+                detailsDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading details...</p></div>';
+                const html = await loadAgentDetailsHTML(agentId);
+                detailsDiv.innerHTML = html;
+            } else {
+                expandIcon.classList.remove('expanded');
+                detailsDiv.classList.remove('expanded');
+                stopAgentAutoRefresh(agentId);
+            }
+        }
+
+        async function loadAgentDetailsHTML(agentId) {
+            try {
+                const response = await fetch(`/agents/${agentId}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                // Store agent data
+                agentData[agentId] = data;
+
+                // Update agent header with name if available
+                if (data.agent_card && data.agent_card !== 'File not found.') {
+                    try {
+                        const cardJson = JSON.parse(data.agent_card);
+                        if (cardJson.name) {
+                            const agentIdEl = document.getElementById(`agent-id-${agentId}`);
+                            if (agentIdEl) {
+                                agentIdEl.innerHTML = `${agentId} <span class="agent-name">(${cardJson.name})</span>`;
+                            }
+                        }
+                    } catch (e) { }
+                }
+
+                // Initialize log sizes for this agent
+                if (!logSizes[agentId]) {
+                    logSizes[agentId] = {
+                        stdout: data.stdout_log.length,
+                        stderr: data.stderr_log.length
+                    };
+                }
+
+                const stdoutExpanded = detailsExpanded[`${agentId}-stdout`] !== false;
+                const stderrExpanded = detailsExpanded[`${agentId}-stderr`] !== false;
+                const cardExpanded = detailsExpanded[`${agentId}-card`] !== false;
+
+                let agentCardContent = '';
+                if (data.agent_card && data.agent_card !== 'File not found.') {
+                    try {
+                        const cardJson = JSON.parse(data.agent_card);
+                        agentCardContent = syntaxHighlightJSON(cardJson);
+                    } catch (e) {
+                        agentCardContent = escapeHtml(data.agent_card);
+                    }
+                } else {
+                    agentCardContent = '<p style="color: #6c757d; font-style: italic;">Not available yet</p>';
+                }
+
+                return `
+                    <div class="agent-controls">
+                        <div class="agent-controls-left">
+                            <div class="control-group">
+                                <input type="checkbox" id="agentRefresh-${agentId}" onchange="toggleAgentAutoRefresh('${agentId}')">
+                                <label for="agentRefresh-${agentId}">Auto-refresh details every</label>
+                                <input type="number" id="agentInterval-${agentId}" value="2" min="1" max="60">
+                                <label>seconds</label>
+                            </div>
+                        </div>
+                        <div class="agent-controls-right">
+                            <button class="btn btn-primary btn-sm" onclick="refreshAgentDetailsNow('${agentId}')">🔄 Refresh Now</button>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <div class="detail-header" onclick="toggleDetailSection('${agentId}', 'stdout')">
+                            <h4>Standard Output Log</h4>
+                            <div class="detail-icon ${stdoutExpanded ? 'expanded' : ''}">▼</div>
+                        </div>
+                        <div class="detail-content ${stdoutExpanded ? 'expanded' : ''}" id="detail-${agentId}-stdout">
+                            <div class="log-container" id="log-${agentId}-stdout">${escapeHtml(data.stdout_log || 'No output yet')}</div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <div class="detail-header" onclick="toggleDetailSection('${agentId}', 'stderr')">
+                            <h4>Standard Error Log</h4>
+                            <div class="detail-icon ${stderrExpanded ? 'expanded' : ''}">▼</div>
+                        </div>
+                        <div class="detail-content ${stderrExpanded ? 'expanded' : ''}" id="detail-${agentId}-stderr">
+                            <div class="log-container" id="log-${agentId}-stderr">${escapeHtml(data.stderr_log || 'No errors yet')}</div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <div class="detail-header" onclick="toggleDetailSection('${agentId}', 'card')">
+                            <h4>Agent Card</h4>
+                            <div class="detail-icon ${cardExpanded ? 'expanded' : ''}">▼</div>
+                        </div>
+                        <div class="detail-content ${cardExpanded ? 'expanded' : ''}" id="detail-${agentId}-card">
+                            <div class="json-container">${agentCardContent}</div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                return `
+                    <div class="error">
+                        ❌ Failed to load agent details: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function toggleDetailSection(agentId, section) {
+            const key = `${agentId}-${section}`;
+            detailsExpanded[key] = !detailsExpanded[key];
+            const contentDiv = document.getElementById(`detail-${key}`);
+            const icon = contentDiv.previousElementSibling.querySelector('.detail-icon');
+
+            if (detailsExpanded[key]) {
+                contentDiv.classList.add('expanded');
+                icon.classList.add('expanded');
+            } else {
+                contentDiv.classList.remove('expanded');
+                icon.classList.remove('expanded');
+            }
+        }
+
+        function toggleAgentAutoRefresh(agentId) {
+            const checkbox = document.getElementById(`agentRefresh-${agentId}`);
+            if (checkbox.checked) {
+                startAgentAutoRefresh(agentId);
+            } else {
+                stopAgentAutoRefresh(agentId);
+            }
+        }
+
+        function startAgentAutoRefresh(agentId) {
+            const interval = parseInt(document.getElementById(`agentInterval-${agentId}`).value) * 1000;
+            stopAgentAutoRefresh(agentId);
+            agentAutoRefreshIntervals[agentId] = setInterval(() => refreshAgentDetails(agentId), interval);
+        }
+
+        function stopAgentAutoRefresh(agentId) {
+            if (agentAutoRefreshIntervals[agentId]) {
+                clearInterval(agentAutoRefreshIntervals[agentId]);
+                delete agentAutoRefreshIntervals[agentId];
+            }
+        }
+
+        async function refreshAgentDetailsNow(agentId) {
+            await refreshAgentDetails(agentId);
+        }
+
+        async function refreshAgentDetails(agentId) {
+            try {
+                const response = await fetch(`/agents/${agentId}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                // Store updated data
+                agentData[agentId] = data;
+
+                // Update agent header with name if available
+                if (data.agent_card && data.agent_card !== 'File not found.') {
+                    try {
+                        const cardJson = JSON.parse(data.agent_card);
+                        if (cardJson.name) {
+                            const agentIdEl = document.getElementById(`agent-id-${agentId}`);
+                            if (agentIdEl && !agentIdEl.innerHTML.includes('agent-name')) {
+                                agentIdEl.innerHTML = `${agentId} <span class="agent-name">(${cardJson.name})</span>`;
+                            }
+                        }
+                    } catch (e) { }
+                }
+
+                // Update agent card
+                const cardContent = document.getElementById(`detail-${agentId}-card`);
+                if (cardContent) {
+                    let agentCardContent = '';
+                    if (data.agent_card && data.agent_card !== 'File not found.') {
+                        try {
+                            const cardJson = JSON.parse(data.agent_card);
+                            agentCardContent = syntaxHighlightJSON(cardJson);
+                        } catch (e) {
+                            agentCardContent = escapeHtml(data.agent_card);
+                        }
+                    } else {
+                        agentCardContent = '<p style="color: #6c757d; font-style: italic;">Not available yet</p>';
+                    }
+                    cardContent.querySelector('.json-container').innerHTML = agentCardContent;
+                }
+
+                // Append new stdout log content
+                const stdoutLog = document.getElementById(`log-${agentId}-stdout`);
+                if (stdoutLog) {
+                    const newStdout = data.stdout_log || '';
+                    const oldSize = logSizes[agentId]?.stdout || 0;
+                    if (newStdout.length > oldSize) {
+                        const newContent = newStdout.substring(oldSize);
+                        stdoutLog.innerHTML += escapeHtml(newContent);
+                        logSizes[agentId].stdout = newStdout.length;
+                        stdoutLog.scrollTop = stdoutLog.scrollHeight;
+                    }
+                }
+
+                // Append new stderr log content
+                const stderrLog = document.getElementById(`log-${agentId}-stderr`);
+                if (stderrLog) {
+                    const newStderr = data.stderr_log || '';
+                    const oldSize = logSizes[agentId]?.stderr || 0;
+                    if (newStderr.length > oldSize) {
+                        const newContent = newStderr.substring(oldSize);
+                        stderrLog.innerHTML += escapeHtml(newContent);
+                        logSizes[agentId].stderr = newStderr.length;
+                        stderrLog.scrollTop = stderrLog.scrollHeight;
+                    }
+                }
+            } catch (error) {
+                console.error(`Failed to refresh agent ${agentId}:`, error);
+            }
+        }
+
+        function syntaxHighlightJSON(json) {
+            const jsonStr = JSON.stringify(json, null, 2);
+            return jsonStr
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                    let cls = 'json-number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'json-key';
+                        } else {
+                            cls = 'json-string';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'json-boolean';
+                    } else if (/null/.test(match)) {
+                        cls = 'json-null';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                });
+        }
+
+        function getStateClass(state) {
+            if (state === 'running') return 'running';
+            if (state === 'starting') return 'starting';
+            if (state === 'pending') return 'pending';
+            if (state.startsWith('finished')) return 'finished';
+            return '';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+
+</html>

@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 import random
 import time
+from tqdm import tqdm
 
 from request_simulation import RequestSimulator
 from white_agent import WhiteAgentBase, NaturalLanguageRequest, StructuredRequest, Location
@@ -165,7 +166,9 @@ class GreenAgentEnvironment:
         requests: List[Dict[str, Any]],
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
-        verbose: bool = True
+        verbose: bool = True,
+        map_output_dir: Optional[str] = None,
+        inter_request_delay_seconds: float = 0.0
     ) -> Dict[str, Any]:
         """
         Run complete evaluation of a white agent.
@@ -176,6 +179,7 @@ class GreenAgentEnvironment:
             start_time: Simulation start time (uses first request time if None)
             end_time: Simulation end time (uses last request time if None)
             verbose: Whether to print progress
+            map_output_dir: Optional path; if provided, export trajectories JSON and an interactive HTML map
 
         Returns:
             Dictionary with evaluation results
@@ -212,7 +216,7 @@ class GreenAgentEnvironment:
         self.processed_requests.clear()
 
         # Process each request
-        for i, request_data in enumerate(requests):
+        for i, request_data in tqdm(enumerate(requests), total=len(requests)):
             # Convert to NaturalLanguageRequest
             nl_request = self._convert_to_nl_request(request_data)
 
@@ -296,7 +300,15 @@ class GreenAgentEnvironment:
                         trip_distance=trip_result.get('trip_distance', 0),
                         trip_time=trip_result.get('trip_time', 0),
                         fare=trip_result.get('fare', 0),
-                        deadhead_miles=trip_result.get('deadhead_miles', 0)
+                        deadhead_miles=trip_result.get('deadhead_miles', 0),
+                        pickup_location={
+                            'latitude': parsed_request.origin.latitude,
+                            'longitude': parsed_request.origin.longitude
+                        },
+                        dropoff_location={
+                            'latitude': parsed_request.destination.latitude,
+                            'longitude': parsed_request.destination.longitude
+                        }
                     )
 
                 # Evaluate request
@@ -305,6 +317,28 @@ class GreenAgentEnvironment:
                     parsed_request,
                     routing_decision,
                     trip_result
+                )
+
+                # Per-request score logging: parse correctness * trip_share
+                trip_miles = trip_result.get('trip_distance', 0) if trip_result else 0
+                deadhead_miles = trip_result.get('deadhead_miles', 0) if trip_result else 0
+                denom = trip_miles + deadhead_miles
+                trip_share = (trip_miles / denom) if denom > 0 else 0
+                parse_ok = False
+                if parsed_request.origin.zone_id and nl_request.ground_truth and nl_request.ground_truth.origin.zone_id:
+                    parse_ok = parsed_request.origin.zone_id == nl_request.ground_truth.origin.zone_id
+                if parsed_request.destination.zone_id and nl_request.ground_truth and nl_request.ground_truth.destination.zone_id:
+                    parse_ok = parse_ok and (parsed_request.destination.zone_id == nl_request.ground_truth.destination.zone_id)
+                per_request_score = (1.0 if parse_ok else 0.0) * trip_share
+                self.logger.log_event(
+                    'REQUEST_SCORE',
+                    {
+                        'request_id': nl_request.request_id,
+                        'score': per_request_score,
+                        'trip_miles': trip_miles,
+                        'deadhead_miles': deadhead_miles,
+                        'parse_ok': parse_ok
+                    }
                 )
 
                 # Track processed request
@@ -334,6 +368,10 @@ class GreenAgentEnvironment:
                     'error': str(e),
                 })
 
+            # Optional pacing between requests
+            if inter_request_delay_seconds > 0 and (i + 1) < len(requests):
+                time.sleep(inter_request_delay_seconds)
+
         # Get final evaluation summary
         evaluation_summary = self.evaluator.get_summary()
 
@@ -349,6 +387,23 @@ class GreenAgentEnvironment:
             print("EVALUATION COMPLETE")
             print("="*80)
             self._print_summary(evaluation_summary)
+
+        # Optional map/trajectory export
+        if map_output_dir:
+            viz_paths = self.export_visualizations(map_output_dir)
+            # Also persist full event log for debugging/analysis
+            try:
+                self.logger.save_json_log(str(Path(map_output_dir) / "events.json"))
+            except Exception as log_exc:
+                self.logger.log_error(
+                    error_type="EVENT_LOG_SAVE_ERROR",
+                    error_message=str(log_exc),
+                    context={"output_dir": map_output_dir},
+                )
+            if verbose:
+                print(f"\nVisualization exported:")
+                print(f"  - Trajectories JSON: {viz_paths['trajectories_json']}")
+                print(f"  - HTML map:          {viz_paths['map_html']}")
 
         return {
             'agent_name': white_agent.agent_name,
@@ -582,6 +637,42 @@ class GreenAgentEnvironment:
             return [self._make_serializable(item) for item in obj]
         else:
             return obj
+
+    def export_visualizations(
+        self,
+        output_dir: str,
+        map_filename: str = "trajectories_map.html",
+        trajectories_filename: str = "trajectories.json",
+        center_lat: float = 40.7589,
+        center_lon: float = -73.9851,
+        zoom: int = 11
+    ) -> Dict[str, str]:
+        """
+        Export trajectory data and an interactive HTML map animation.
+
+        Args:
+            output_dir: Directory to write files into
+            map_filename: HTML file name for the map
+            trajectories_filename: JSON file name for trajectory data
+            center_lat/center_lon: Map center (NYC by default)
+            zoom: Initial map zoom level
+
+        Returns:
+            Dict with paths to generated files.
+        """
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        trajectories_path = output_path / trajectories_filename
+        map_path = output_path / map_filename
+
+        self.logger.export_trajectories_json(str(trajectories_path))
+        self.logger.export_map_html(str(map_path), center_lat=center_lat, center_lon=center_lon, zoom=zoom)
+
+        return {
+            'trajectories_json': str(trajectories_path),
+            'map_html': str(map_path)
+        }
 
     def __repr__(self) -> str:
         return (f"GreenAgentEnvironment(vehicles={len(self.vehicle_database)}, "

@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .content {
+            padding: 32px;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        /* Form Styles */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: #374151;
+            font-size: 14px;
+        }
+
+        .form-group input[type="text"],
+        .form-group select,
+        .form-group textarea {
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input[type="text"]:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .conditional-field {
+            display: none;
+        }
+
+        .conditional-field.show {
+            display: flex;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            background: #f9fafb;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: 1fr 200px 200px;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .filter-bar input {
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .filter-bar select {
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        /* Agent Cards */
+        .agent-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .agent-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.2s;
+            cursor: pointer;
+            background: white;
+        }
+
+        .agent-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: #667eea;
+        }
+
+        .agent-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+
+        .agent-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .agent-badges {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-green {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-hosted {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-remote {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-proxied {
+            background: #f3e8ff;
+            color: #6b21a8;
+        }
+
+        .badge-status {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .badge-running {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-pending {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+
+        .badge-starting {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .agent-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .info-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .info-label {
+            font-weight: 500;
+            color: #374151;
+            min-width: 80px;
+        }
+
+        .info-value {
+            word-break: break-all;
+        }
+
+        .agent-card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .agent-card-actions .btn {
+            font-size: 13px;
+            padding: 8px 14px;
+        }
+
+        /* Detail View */
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .detail-content {
+            display: grid;
+            gap: 20px;
+        }
+
+        .detail-section {
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .detail-section h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 16px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 12px;
+        }
+
+        .detail-label {
+            font-weight: 500;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .detail-value {
+            color: #111827;
+            font-size: 14px;
+            word-break: break-word;
+        }
+
+        .detail-code {
+            background: #1f2937;
+            color: #10b981;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #9ca3af;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            opacity: 0.5;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .field-error {
+            color: #dc2626;
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .field-error.show {
+            display: block;
+        }
+
+        .form-group textarea.error {
+            border-color: #dc2626;
+        }
+
+        .form-group textarea.success {
+            border-color: #059669;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Agent Management</h1>
+            <button class="btn btn-primary" onclick="showCreateForm()">+ Create Agent</button>
+        </div>
+
+        <div class="content">
+            <!-- Message Area -->
+            <div id="message" class="message"></div>
+
+            <!-- List Section -->
+            <div id="listSection" class="section active">
+                <div class="filter-bar">
+                    <input type="text" id="searchInput" placeholder="Search by name..." oninput="filterAgents()">
+                    <select id="filterDeployType" onchange="filterAgents()">
+                        <option value="">All Deploy Types</option>
+                        <option value="hosted">Hosted</option>
+                        <option value="remote">Remote</option>
+                        <option value="proxied">Proxied</option>
+                    </select>
+                    <select id="filterIsGreen" onchange="filterAgents()">
+                        <option value="">All Agents</option>
+                        <option value="true">Green Only</option>
+                        <option value="false">Non-Green Only</option>
+                    </select>
+                </div>
+                <div id="agentGrid" class="agent-grid"></div>
+            </div>
+
+            <!-- Create/Edit Section -->
+            <div id="createSection" class="section">
+                <div class="detail-header">
+                    <h2>Create New Agent</h2>
+                    <button class="btn btn-secondary" onclick="showList()">Back to List</button>
+                </div>
+                <form id="agentForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="name">Name *</label>
+                            <input type="text" id="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Options</label>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="is_green">
+                                <label for="is_green">Is Green Agent</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="deploy_type">Deploy Type *</label>
+                            <select id="deploy_type" required onchange="toggleConditionalFields()">
+                                <option value="hosted">Hosted</option>
+                                <option value="remote">Remote</option>
+                                <option value="proxied">Proxied</option>
+                            </select>
+                        </div>
+                        <div class="form-group conditional-field" id="ctrl_url_field">
+                            <label for="ctrl_url">Controller URL *</label>
+                            <input type="text" id="ctrl_url" placeholder="https://example.com/api">
+                        </div>
+                        <div class="form-group conditional-field" id="hosted_method_field">
+                            <label for="hosted_method">Hosted Method *</label>
+                            <select id="hosted_method" onchange="toggleHostedMethodFields()">
+                                <option value="git">Git Repository</option>
+                                <option value="docker">Docker Image</option>
+                                <option value="description">Description Prompt</option>
+                            </select>
+                        </div>
+                        <div class="form-group conditional-field" id="inject_litellm_field">
+                            <label>LiteLLM Options</label>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="inject_litellm_proxy_api">
+                                <label for="inject_litellm_proxy_api">Inject LiteLLM Proxy API</label>
+                            </div>
+                        </div>
+                        <div class="form-group full-width conditional-field" id="secret_field">
+                            <label for="secret">Secret * (JSON format)</label>
+                            <textarea id="secret" placeholder="Enter secret JSON configuration here..."
+                                oninput="validateJSON()"></textarea>
+                            <div id="secret_error" class="field-error">Invalid JSON format. Please check your syntax.
+                            </div>
+                        </div>
+                        <div class="form-group conditional-field" id="git_url_field">
+                            <label for="git_url">Git URL *</label>
+                            <input type="text" id="git_url" placeholder="https://github.com/user/repo.git">
+                        </div>
+                        <div class="form-group conditional-field" id="git_branch_field">
+                            <label for="git_branch">Git Branch *</label>
+                            <input type="text" id="git_branch" value="main" placeholder="main">
+                        </div>
+                        <div class="form-group full-width conditional-field" id="docker_image_field">
+                            <label for="docker_image_url">Docker Image URL *</label>
+                            <input type="text" id="docker_image_url" placeholder="docker.io/user/image:tag">
+                        </div>
+                        <div class="form-group full-width conditional-field" id="description_prompt_field">
+                            <label for="description_prompt">Description Prompt *</label>
+                            <textarea id="description_prompt"
+                                placeholder="Describe what the agent should do..."></textarea>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-success">Create Agent</button>
+                        <button type="button" class="btn btn-secondary" onclick="showList()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Detail Section -->
+            <div id="detailSection" class="section">
+                <div class="detail-header">
+                    <h2 id="detailTitle"></h2>
+                    <button class="btn btn-secondary" onclick="showList()">Back to List</button>
+                </div>
+                <div id="detailContent" class="detail-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let agents = [];
+        let currentAgent = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAgents();
+            toggleConditionalFields();
+        });
+
+        // Form submission
+        document.getElementById('agentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Validate JSON if secret field is visible
+            const secretField = document.getElementById('secret_field');
+            if (secretField.classList.contains('show')) {
+                if (!validateJSON(true)) {
+                    showMessage('Please fix the JSON format error in the Secret field', 'error');
+                    return;
+                }
+            }
+
+            await createAgent();
+        });
+
+        // Validate JSON in secret field
+        function validateJSON(silent = false) {
+            const secretField = document.getElementById('secret_field');
+            const secretTextarea = document.getElementById('secret');
+            const errorDiv = document.getElementById('secret_error');
+
+            // Only validate if the field is visible
+            if (!secretField.classList.contains('show')) {
+                return true;
+            }
+
+            const value = secretTextarea.value.trim();
+
+            // If empty, don't show error but return false (will be caught by required validation)
+            if (!value) {
+                secretTextarea.classList.remove('error', 'success');
+                errorDiv.classList.remove('show');
+                return false;
+            }
+
+            try {
+                JSON.parse(value);
+                secretTextarea.classList.remove('error');
+                secretTextarea.classList.add('success');
+                errorDiv.classList.remove('show');
+                return true;
+            } catch (e) {
+                if (!silent) {
+                    secretTextarea.classList.add('error');
+                    secretTextarea.classList.remove('success');
+                    errorDiv.classList.add('show');
+                }
+                return false;
+            }
+        }
+
+        // Toggle conditional fields based on deploy_type
+        function toggleConditionalFields() {
+            const deployType = document.getElementById('deploy_type').value;
+            const hostedMethodField = document.getElementById('hosted_method_field');
+            const injectLitellmField = document.getElementById('inject_litellm_field');
+            const secretField = document.getElementById('secret_field');
+            const ctrlUrlField = document.getElementById('ctrl_url_field');
+
+            // Show/hide fields based on deploy type
+            const isHosted = deployType === 'hosted';
+            const isRemote = deployType === 'remote';
+
+            hostedMethodField.classList.toggle('show', isHosted);
+            injectLitellmField.classList.toggle('show', isHosted);
+            ctrlUrlField.classList.toggle('show', isRemote);
+
+            // Secret field visibility is handled by toggleHostedMethodFields for hosted agents
+            if (!isHosted) {
+                secretField.classList.remove('show');
+            }
+
+            if (isHosted) {
+                toggleHostedMethodFields();
+            } else {
+                // Hide all hosted-specific fields
+                document.getElementById('git_url_field').classList.remove('show');
+                document.getElementById('git_branch_field').classList.remove('show');
+                document.getElementById('docker_image_field').classList.remove('show');
+                document.getElementById('description_prompt_field').classList.remove('show');
+            }
+        }
+
+        // Toggle fields based on hosted method
+        function toggleHostedMethodFields() {
+            const hostedMethod = document.getElementById('hosted_method').value;
+            const gitUrlField = document.getElementById('git_url_field');
+            const gitBranchField = document.getElementById('git_branch_field');
+            const dockerImageField = document.getElementById('docker_image_field');
+            const descriptionPromptField = document.getElementById('description_prompt_field');
+            const injectLitellmCheckbox = document.getElementById('inject_litellm_proxy_api');
+            const secretField = document.getElementById('secret_field');
+
+            // Hide all first
+            gitUrlField.classList.remove('show');
+            gitBranchField.classList.remove('show');
+            dockerImageField.classList.remove('show');
+            descriptionPromptField.classList.remove('show');
+
+            // Show based on selected method
+            if (hostedMethod === 'git') {
+                gitUrlField.classList.add('show');
+                gitBranchField.classList.add('show');
+                injectLitellmCheckbox.disabled = false;
+                secretField.classList.add('show');
+            } else if (hostedMethod === 'docker') {
+                dockerImageField.classList.add('show');
+                injectLitellmCheckbox.disabled = false;
+                secretField.classList.add('show');
+            } else if (hostedMethod === 'description') {
+                descriptionPromptField.classList.add('show');
+                // For description method, must inject LiteLLM and no secret needed
+                injectLitellmCheckbox.checked = true;
+                injectLitellmCheckbox.disabled = true;
+                secretField.classList.remove('show');
+            }
+        }
+
+        // API calls
+        async function loadAgents() {
+            try {
+                const response = await fetch('/agents/');
+                agents = await response.json();
+                renderAgents();
+            } catch (error) {
+                showMessage('Failed to load agents: ' + error.message, 'error');
+            }
+        }
+
+        async function createAgent() {
+            const deployType = document.getElementById('deploy_type').value;
+
+            const agentData = {
+                name: document.getElementById('name').value,
+                is_green: document.getElementById('is_green').checked,
+                deploy_type: deployType,
+                secret: null,
+                inject_litellm_proxy_api: false,
+                ctrl_url: null,
+                agent_url: null,
+                git_url: null,
+                git_branch: null,
+                docker_image_url: null,
+                description_prompt: null,
+                gcp_docker_image_url: null,
+                gcp_cloudrun_service_name: null
+            };
+
+            // Add secret and inject_litellm_proxy_api for hosted agents
+            if (deployType === 'hosted') {
+                const hostedMethod = document.getElementById('hosted_method').value;
+                agentData.inject_litellm_proxy_api = document.getElementById('inject_litellm_proxy_api').checked;
+
+                // Secret is not needed for description-based hosted agents
+                if (hostedMethod !== 'description') {
+                    agentData.secret = document.getElementById('secret').value;
+                    if (!agentData.secret) {
+                        showMessage('Secret is required for git and docker hosting methods', 'error');
+                        return;
+                    }
+                }
+            }
+
+            // Add ctrl_url for remote agents
+            if (deployType === 'remote') {
+                agentData.ctrl_url = document.getElementById('ctrl_url').value;
+                if (!agentData.ctrl_url) {
+                    showMessage('Controller URL is required for remote agents', 'error');
+                    return;
+                }
+            }
+
+            // Add conditional fields based on deploy_type
+            if (deployType === 'hosted') {
+                const hostedMethod = document.getElementById('hosted_method').value;
+
+                if (hostedMethod === 'git') {
+                    const gitUrl = document.getElementById('git_url').value;
+                    const gitBranch = document.getElementById('git_branch').value;
+                    if (gitUrl && gitBranch) {
+                        agentData.git_url = gitUrl;
+                        agentData.git_branch = gitBranch;
+                    } else {
+                        showMessage('Git URL and branch are required for git hosting method', 'error');
+                        return;
+                    }
+                } else if (hostedMethod === 'docker') {
+                    const dockerImageUrl = document.getElementById('docker_image_url').value;
+                    if (dockerImageUrl) {
+                        agentData.docker_image_url = dockerImageUrl;
+                    } else {
+                        showMessage('Docker image URL is required for docker hosting method', 'error');
+                        return;
+                    }
+                } else if (hostedMethod === 'description') {
+                    const descriptionPrompt = document.getElementById('description_prompt').value;
+                    if (descriptionPrompt) {
+                        agentData.description_prompt = descriptionPrompt;
+                    } else {
+                        showMessage('Description prompt is required for description hosting method', 'error');
+                        return;
+                    }
+                }
+            }
+
+            try {
+                const response = await fetch('/agents/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(agentData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to create agent');
+                }
+
+                showMessage('Agent created successfully!', 'success');
+                document.getElementById('agentForm').reset();
+                await loadAgents();
+                showList();
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteAgent(id) {
+            if (!confirm('Are you sure you want to delete this agent?')) return;
+
+            try {
+                const response = await fetch(`/agents/${id}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Failed to delete agent');
+
+                showMessage('Agent deleted successfully!', 'success');
+                await loadAgents();
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function viewAgent(id) {
+            try {
+                const response = await fetch(`/agents/${id}`);
+                currentAgent = await response.json();
+                renderDetail();
+                showDetail();
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Rendering
+        function renderAgents() {
+            const grid = document.getElementById('agentGrid');
+            const filteredAgents = getFilteredAgents();
+
+            if (filteredAgents.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1/-1;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                        </svg>
+                        <p>No agents found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filteredAgents.map(agent => `
+                <div class="agent-card" onclick="viewAgent(${agent.id})">
+                    <div class="agent-card-header">
+                        <div>
+                            <div class="agent-name">${escapeHtml(agent.name)}</div>
+                            <div class="agent-badges">
+                                ${agent.is_green ? '<span class="badge badge-green">Green</span>' : ''}
+                                <span class="badge badge-${agent.deploy_type}">${agent.deploy_type}</span>
+                                ${agent.deploy_type === 'hosted' ? `<span class="badge-status badge-${agent.hosted_status}">${agent.hosted_status}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="agent-info">
+                        <div class="info-row">
+                            <span class="info-label">ID:</span>
+                            <span class="info-value">${agent.id}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Created:</span>
+                            <span class="info-value">${formatDate(agent.created_at)}</span>
+                        </div>
+                        ${agent.ctrl_url ? `
+                        <div class="info-row">
+                            <span class="info-label">Controller URL:</span>
+                            <span class="info-value">${escapeHtml(agent.ctrl_url)}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="agent-card-actions" onclick="event.stopPropagation()">
+                        <button class="btn btn-secondary" onclick="viewAgent(${agent.id})">View Details</button>
+                        <button class="btn btn-danger" onclick="deleteAgent(${agent.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderDetail() {
+            if (!currentAgent) return;
+
+            document.getElementById('detailTitle').textContent = currentAgent.name;
+
+            let content = `
+                <div class="detail-section">
+                    <h3>Basic Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-label">ID</div>
+                        <div class="detail-value">${currentAgent.id}</div>
+                        <div class="detail-label">Name</div>
+                        <div class="detail-value">${escapeHtml(currentAgent.name)}</div>
+                        <div class="detail-label">Created At</div>
+                        <div class="detail-value">${formatDate(currentAgent.created_at)}</div>
+                        <div class="detail-label">Is Green</div>
+                        <div class="detail-value">${currentAgent.is_green ? '✓ Yes' : '✗ No'}</div>
+                        <div class="detail-label">Deploy Type</div>
+                        <div class="detail-value"><span class="badge badge-${currentAgent.deploy_type}">${currentAgent.deploy_type}</span></div>
+                        <div class="detail-label">Inject LiteLLM Proxy API</div>
+                        <div class="detail-value">${currentAgent.inject_litellm_proxy_api ? '✓ Yes' : '✗ No'}</div>
+                    </div>
+                </div>
+
+                ${currentAgent.ctrl_url || currentAgent.agent_url || currentAgent.secret ? `
+                <div class="detail-section">
+                    <h3>Configuration</h3>
+                    <div class="detail-grid">
+                        ${currentAgent.ctrl_url ? `
+                        <div class="detail-label">Controller URL</div>
+                        <div class="detail-value"><a href="${escapeHtml(currentAgent.ctrl_url)}" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: underline;">${escapeHtml(currentAgent.ctrl_url)}</a></div>
+                        ` : ''}
+                        ${currentAgent.agent_url ? `
+                        <div class="detail-label">Agent URL</div>
+                        <div class="detail-value"><a href="${escapeHtml(currentAgent.agent_url)}" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: underline;">${escapeHtml(currentAgent.agent_url)}</a></div>
+                        ` : ''}
+                        ${currentAgent.secret ? `
+                        <div class="detail-label">Secret</div>
+                        <div class="detail-value" style="grid-column: 1 / -1;">
+                            <div class="detail-code">${escapeHtml(currentAgent.secret)}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ` : ''}
+            `;
+
+            if (currentAgent.deploy_type === 'hosted') {
+                content += `
+                    <div class="detail-section">
+                        <h3>Hosted Configuration</h3>
+                        <div class="detail-grid">
+                            <div class="detail-label">Status</div>
+                            <div class="detail-value"><span class="badge-status badge-${currentAgent.hosted_status}">${currentAgent.hosted_status}</span></div>
+                            ${currentAgent.git_url ? `
+                            <div class="detail-label">Git URL</div>
+                            <div class="detail-value">${escapeHtml(currentAgent.git_url)}</div>
+                            <div class="detail-label">Git Branch</div>
+                            <div class="detail-value">${escapeHtml(currentAgent.git_branch || '')}</div>
+                            ` : ''}
+                            ${currentAgent.docker_image_url ? `
+                            <div class="detail-label">Docker Image</div>
+                            <div class="detail-value">${escapeHtml(currentAgent.docker_image_url)}</div>
+                            ` : ''}
+                            ${currentAgent.description_prompt ? `
+                            <div class="detail-label">Description Prompt</div>
+                            <div class="detail-value" style="grid-column: 1 / -1;">
+                                <div class="detail-code">${escapeHtml(currentAgent.description_prompt)}</div>
+                            </div>
+                            ` : ''}
+                            ${currentAgent.gcp_docker_image_url ? `
+                            <div class="detail-label">GCP Docker Image</div>
+                            <div class="detail-value">${escapeHtml(currentAgent.gcp_docker_image_url)}</div>
+                            ` : ''}
+                            ${currentAgent.gcp_cloudrun_service_name ? `
+                            <div class="detail-label">GCP Cloud Run Service</div>
+                            <div class="detail-value">${escapeHtml(currentAgent.gcp_cloudrun_service_name)}</div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('detailContent').innerHTML = content;
+        }
+
+        // Filtering
+        function filterAgents() {
+            renderAgents();
+        }
+
+        function getFilteredAgents() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const deployType = document.getElementById('filterDeployType').value;
+            const isGreen = document.getElementById('filterIsGreen').value;
+
+            return agents.filter(agent => {
+                const matchesSearch = agent.name.toLowerCase().includes(searchTerm);
+                const matchesDeployType = !deployType || agent.deploy_type === deployType;
+                const matchesIsGreen = !isGreen || agent.is_green.toString() === isGreen;
+                return matchesSearch && matchesDeployType && matchesIsGreen;
+            });
+        }
+
+        // Navigation
+        function showList() {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('listSection').classList.add('active');
+        }
+
+        function showCreateForm() {
+            document.getElementById('agentForm').reset();
+            toggleConditionalFields();
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('createSection').classList.add('active');
+        }
+
+        function showDetail() {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('detailSection').classList.add('active');
+        }
+
+        // Utilities
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message ${type} show`;
+            setTimeout(() => msg.classList.remove('show'), 5000);
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleString();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+
+</html>

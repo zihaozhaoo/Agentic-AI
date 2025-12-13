@@ -6,8 +6,12 @@ venv/
 .venv/
 .DS_Store
 
+# AgentBeats runtime state
+.ab/
+
 # Data files
 *.parquet
+*.pdf
 
 # Battle log files
 *.log

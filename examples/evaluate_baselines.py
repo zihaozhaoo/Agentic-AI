@@ -13,7 +13,7 @@ import datetime
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from request_simulation import RequestSimulator
-from white_agent import DummyWhiteAgent, RegexBaselineAgent, RandomBaselineAgent
+from white_agent import DummyWhiteAgent, RegexBaselineAgent, RandomBaselineAgent, NearestVehicleBaselineAgent
 from environment import GreenAgentEnvironment
 from utils import EventLogger
 
@@ -48,37 +48,47 @@ def main():
     # Initialize Fleet
     print("Initializing Fleet...")
     environment.initialize_vehicles(
-        num_vehicles=50,
+        num_vehicles=100,
         sample_parquet_path=parquet_file,
-        sample_size=200
+        sample_size=2000
     )
     
     # Generate Requests
     print("Generating Requests...")
     requests = environment.generate_requests_from_data(
         parquet_path=parquet_file,
-        n_requests=50, # 50 requests for quick evaluation
+        n_requests=2000, # 500 requests for more comprehensive evaluation
         augment_location=False
     )
     print(f"Generated {len(requests)} requests.")
     
     # Define Agents to Test
+        # DummyWhiteAgent(agent_name="DummyAgent (Test)"),
+        # RegexBaselineAgent(agent_name="RegexBaseline"),
+        # RandomBaselineAgent(agent_name="RandomBaseline"),
     agents = [
-        DummyWhiteAgent(agent_name="DummyAgent (Test)"),
-        RegexBaselineAgent(agent_name="RegexBaseline"),
-        RandomBaselineAgent(agent_name="RandomBaseline")
+
+        NearestVehicleBaselineAgent(agent_name="NearestVehicleBaseline")
     ]
     
     results_summary = []
+    viz_root = project_root / "logs" / "visualizations"
     
     # Run Evaluation Loop
     for agent in agents:
         print(f"\nRunning Evaluation for {agent.agent_name}...")
         try:
+            logger.clear()  # reset in-memory events so each agent gets its own trajectories
+
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            agent_slug = agent.agent_name.lower().replace(" ", "_").replace("/", "_").replace("(", "").replace(")", "")
+            map_output_dir = viz_root / f"{agent_slug}_{timestamp}"
+
             result = environment.run_evaluation(
                 white_agent=agent,
                 requests=requests,
-                verbose=False # Reduce verbosity for batch run
+                verbose=False, # Reduce verbosity for batch run
+                map_output_dir=str(map_output_dir)
             )
             
             summary = result['evaluation_summary']
@@ -96,6 +106,8 @@ def main():
             print(f"  Score: {summary['overall_score']:.2f}")
             print(f"  Origin Acc: {parsing['origin_zone_accuracy']*100:.1f}%")
             print(f"  Dest Acc: {parsing['destination_zone_accuracy']*100:.1f}%")
+            print(f"  Trajectories JSON: {map_output_dir / 'trajectories.json'}")
+            print(f"  HTML Map:          {map_output_dir / 'trajectories_map.html'}")
             
         except Exception as e:
             print(f"  Failed: {e}")

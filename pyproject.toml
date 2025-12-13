@@ -9,23 +9,34 @@ version = "1.2.5"
 description = "AgentBeats SDK for building security-contest AI agents"
 requires-python = ">=3.11"
 authors = [{ "name" = "Simon Xie", "email" = "simonxie2004@outlook.com" }]
-dependencies = ["tomli>=2", 
-                "toml", 
-                "fastmcp", 
-                "fastapi", 
-                "uvicorn",
-                "pydantic>=2.0.0",
-                "httpx",
-                "a2a-sdk>=0.3.0",
-                "paramiko>=3.5.1",
-                "openai-agents",
-                "openai", 
-                "sqlalchemy",
-                "supabase",
-                "PyJWT",
-                "python-dotenv",
-                "python-multipart",
-                "google-cloud-storage"]
+dependencies = [
+    "tomli>=2",
+    "toml",
+    "fastmcp",
+    "fastapi",
+    "uvicorn",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.2.1",
+    "sqlmodel>=0.0.21",
+    "google-cloud-run>=0.10.10",
+    "docker>=7.1.0",
+    "httpx",
+    "a2a-sdk>=0.3.0",
+    "paramiko>=3.5.1",
+    "openai-agents",
+    "openai",
+    "sqlalchemy",
+    "supabase",
+    "PyJWT",
+    "python-dotenv",
+    "python-multipart",
+    "google-cloud-storage",
+    "typer>=0.20.0",
+    "pandas>=2.3.3",
+    "litellm>=1.80.9",
+    "pyarrow>=22.0.0",
+    "fastparquet>=2024.11.0",
+]
 license = { text = "MIT" }
 readme = "README.md"
 classifiers = [
@@ -34,8 +45,8 @@ classifiers = [
 ]
 
 [project.scripts]
-agentbeats = "agentbeats.cli:main" # Entry point for the CLI, supporting cmd like "agentbeats run_agent ..."
-ab = "agentbeats.cli:main" # Short alias version
+agentbeats = "agentbeats.cli:typer_app"
+ab = "agentbeats.cli:typer_app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -43,6 +54,7 @@ where = ["src"]
 [tool.setuptools.package-data]
 backend = ["**/*"]
 mcpcp = ["**/*"]
+agentbeats = ["frontend/*.html"]
 
 # To ensure CI tools can find the version
 [tool.semantic_release]
@@ -52,4 +64,3 @@ tag_format       = "v{version}"
 repository_url   = "https://github.com/agentbeats/agentbeats.git"
 changelog_file   = false
 version_toml     = ["pyproject.toml:project.version"]
-

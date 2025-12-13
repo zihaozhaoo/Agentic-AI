@@ -13,7 +13,8 @@ from .data_structures import (
     RequestPriority
 )
 from .base_agent import WhiteAgentBase, DummyWhiteAgent
-from .baseline_agents import RandomBaselineAgent, RegexBaselineAgent
+from .baseline_agents import RandomBaselineAgent, RegexBaselineAgent, NearestVehicleBaselineAgent
+from .remote_agent import RemoteWhiteAgent
 
 __all__ = [
     'Location',
@@ -25,4 +26,6 @@ __all__ = [
     'DummyWhiteAgent',
     'RandomBaselineAgent',
     'RegexBaselineAgent',
+    'NearestVehicleBaselineAgent',
+    'RemoteWhiteAgent',
 ]
