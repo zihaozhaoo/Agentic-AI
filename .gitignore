@@ -3,6 +3,7 @@
 **/tmp/
 **/data/
 venv/
+.venv/
 .DS_Store
 
 # Data files
