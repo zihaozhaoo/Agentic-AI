@@ -62,6 +62,12 @@ class VehicleSimulator:
         Execute a routing decision by updating vehicle state.
 
         This simulates the white agent's decision being sent to the vehicle.
+        
+        Note on dual pickup time estimates:
+        - The routing_decision contains the agent's estimated_pickup_time (agent's prediction)
+        - This method calculates the simulator's estimated_pickup_time (ground truth based on actual distance)
+        - The simulator's estimate is used for actual trip execution
+        - Both are logged for comparison and debugging purposes
 
         Args:
             routing_decision: Routing decision from white agent
@@ -173,6 +179,15 @@ class VehicleSimulator:
         trip_info['trip_time'] = trip_time
         trip_info['fare'] = fare
         trip_info['deadhead_miles'] = pickup_distance
+        
+        # Calculate actual pickup time in minutes for evaluator
+        # This is the time between request and actual pickup
+        if 'actual_pickup_time_timestamp' in trip_info and 'request_time' in trip_info:
+            pickup_time_delta = trip_info['actual_pickup_time_timestamp'] - trip_info['request_time']
+            trip_info['actual_pickup_time'] = pickup_time_delta.total_seconds() / 60.0
+        elif 'actual_pickup_time' not in trip_info:
+            # Only set to 0.0 if no pickup time exists at all (preserve existing value)
+            trip_info['actual_pickup_time'] = 0.0
 
         return trip_info
 
@@ -200,20 +215,25 @@ class VehicleSimulator:
             if trip_info['status'] == 'en_route_to_pickup' and new_time >= trip_info['estimated_pickup_time']:
                 vehicle = self.vehicle_database.get_vehicle_by_id(trip_info['vehicle_id'])
                 if vehicle:
+                    # Use the actual estimated pickup time, not the snapped new_time
+                    actual_pickup_time = trip_info['estimated_pickup_time']
+                    
                     vehicle.start_trip(request_id)
-                    vehicle.update_location(trip_info['pickup_location'], new_time)
+                    vehicle.update_location(trip_info['pickup_location'], actual_pickup_time)
                     trip_info['status'] = 'on_trip'
-                    trip_info['actual_pickup_time_timestamp'] = new_time
+                    trip_info['actual_pickup_time_timestamp'] = actual_pickup_time
 
-                    # Compute when the dropoff should occur based on travel time
+                    # Compute when the dropoff should occur based on travel time from the actual pickup
                     _, trip_time = self.distance_calculator(
                         trip_info['pickup_location'],
                         trip_info['dropoff_location']
                     )
-                    trip_info['estimated_dropoff_time'] = new_time + timedelta(minutes=trip_time)
+                    trip_info['estimated_dropoff_time'] = actual_pickup_time + timedelta(minutes=trip_time)
 
             if trip_info['status'] == 'on_trip' and new_time >= trip_info.get('estimated_dropoff_time', new_time):
-                completion = self.simulate_trip_completion(request_id, new_time)
+                # Use the actual estimated dropoff time, not the snapped new_time
+                actual_dropoff_time = trip_info.get('estimated_dropoff_time', new_time)
+                completion = self.simulate_trip_completion(request_id, actual_dropoff_time)
                 if completion:
                     completed_trips.append(completion)
 

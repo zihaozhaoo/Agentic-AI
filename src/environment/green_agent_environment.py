@@ -255,8 +255,9 @@ class GreenAgentEnvironment:
             # Convert to NaturalLanguageRequest
             nl_request = self._convert_to_nl_request(request_data)
 
-            # Advance simulation to the current request time to update busy vehicles/trips
-            self._advance_to_time(nl_request.request_time)
+            # Advance simulation to the current request time, processing any vehicle events
+            # that occur before this request arrives
+            self._advance_to_time_with_events(nl_request.request_time)
 
             # Log request arrival
             self.logger.log_request_arrival(
@@ -296,6 +297,7 @@ class GreenAgentEnvironment:
                 )
 
                 # Log vehicle assignment
+                # Note: This logs the agent's estimated pickup time for comparison with actual
                 vehicle = self.vehicle_database.get_vehicle_by_id(routing_decision.vehicle_id)
                 if vehicle:
                     self.logger.log_vehicle_assignment(
@@ -356,7 +358,7 @@ class GreenAgentEnvironment:
                 time.sleep(inter_request_delay_seconds)
 
         # Advance through the remaining horizon to complete outstanding trips
-        self._advance_to_time(self.simulation_end_time)
+        self._advance_to_time_with_events(self.simulation_end_time)
 
         # Force-complete any residual trips that exceeded the horizon
         if self.active_assignments:
@@ -687,6 +689,80 @@ class GreenAgentEnvironment:
         # Finalize completed trips so vehicles become available again
         for trip_result in completed_trips:
             self._finalize_completed_trip(trip_result)
+
+    def _advance_to_time_with_events(self, target_time: datetime):
+        """
+        Advance the simulator clock to a target time, processing vehicle events at their exact times.
+        
+        This method implements event-driven simulation by:
+        1. Collecting all vehicle events (pickups, dropoffs) that occur before target_time
+        2. Advancing time incrementally to each event
+        3. Processing events at their exact scheduled times
+        
+        This ensures accurate timestamps in trajectories and prevents event timestamp collapse.
+
+        Args:
+            target_time: Simulation timestamp to advance to
+        """
+        # Skip when the clock has not started yet
+        if self.current_time is None:
+            self.current_time = target_time
+            return
+
+        # Ignore requests that arrive earlier than the current clock to preserve causality
+        if target_time < self.current_time:
+            return
+
+        # Collect all upcoming vehicle events between current_time and target_time
+        while self.current_time < target_time:
+            next_event_time = self._get_next_vehicle_event_time()
+            
+            # If no events or next event is after target, advance directly to target
+            if next_event_time is None or next_event_time >= target_time:
+                self._advance_to_time(target_time)
+                break
+            
+            # Guard against infinite loop: skip events in the past.
+            # Note: next_event_time == self.current_time is valid (events due "now").
+            if next_event_time < self.current_time:
+                # This shouldn't happen, but if it does, log error and advance to target
+                self.logger.log_error(
+                    error_type='INVALID_EVENT_TIME',
+                    error_message=f'Next event time {next_event_time} is not after current time {self.current_time}',
+                    context={'next_event_time': next_event_time.isoformat(), 'current_time': self.current_time.isoformat()}
+                )
+                self._advance_to_time(target_time)
+                break
+
+            # Events scheduled exactly at the current clock are due now; process them without advancing the clock.
+            if next_event_time == self.current_time:
+                self._advance_to_time(self.current_time)
+                continue
+            
+            # Otherwise, advance to the next event time
+            self._advance_to_time(next_event_time)
+
+    def _get_next_vehicle_event_time(self) -> Optional[datetime]:
+        """
+        Get the timestamp of the next vehicle event (pickup or dropoff).
+        
+        Returns:
+            Datetime of next event, or None if no pending events
+        """
+        next_time = None
+        
+        # Check all active trips for their next event time
+        for trip_info in self.vehicle_simulator.active_trips.values():
+            if trip_info['status'] == 'en_route_to_pickup':
+                event_time = trip_info.get('estimated_pickup_time')
+                if event_time and (next_time is None or event_time < next_time):
+                    next_time = event_time
+            elif trip_info['status'] == 'on_trip':
+                event_time = trip_info.get('estimated_dropoff_time')
+                if event_time and (next_time is None or event_time < next_time):
+                    next_time = event_time
+        
+        return next_time
 
     def _finalize_completed_trip(self, trip_result: Dict[str, Any]):
         """

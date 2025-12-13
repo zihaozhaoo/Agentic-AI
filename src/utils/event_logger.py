@@ -320,6 +320,56 @@ class EventLogger:
 
         self.logger.info(f"Saved {len(events_dict)} events to {output_path}")
 
+    def load_json_log(self, input_path: str, clear_existing: bool = True) -> int:
+        """
+        Load a JSON event log produced by save_json_log().
+
+        Args:
+            input_path: Path to JSON event log (list of event dicts).
+            clear_existing: If True, clears any existing in-memory events first.
+
+        Returns:
+            Number of loaded events.
+        """
+        input_file = Path(input_path)
+        with open(input_file, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+
+        if clear_existing:
+            self.json_events.clear()
+
+        if not isinstance(payload, list):
+            raise ValueError(f"Expected a list of events in {input_path}")
+
+        loaded = 0
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+
+            timestamp_raw = item.get("timestamp")
+            event_type = item.get("event_type")
+            event_data = item.get("event_data")
+
+            if not event_type or not isinstance(event_data, dict):
+                continue
+
+            try:
+                timestamp = datetime.fromisoformat(timestamp_raw) if isinstance(timestamp_raw, str) else datetime.now()
+            except Exception:
+                timestamp = datetime.now()
+
+            self.json_events.append(
+                LogEvent(
+                    timestamp=timestamp,
+                    event_type=str(event_type),
+                    event_data=event_data,
+                )
+            )
+            loaded += 1
+
+        self.logger.info(f"Loaded {loaded} events from {input_path}")
+        return loaded
+
     def export_trajectories_json(self, output_path: str):
         """
         Export simplified trajectories for mapping and animation.
@@ -407,6 +457,8 @@ class EventLogger:
         assignments: Dict[str, Dict[str, Any]] = {}
         trips: List[Dict[str, Any]] = []
         initial_vehicles: List[Dict[str, Any]] = []
+        arrivals: Dict[str, str] = {}
+        routing_times: Dict[str, Dict[str, Any]] = {}
 
         for event in self.json_events:
             if event.event_type == 'VEHICLE_ASSIGNMENT':
@@ -430,6 +482,21 @@ class EventLogger:
                         'vehicle_id': vehicle_id,
                         'location': location
                     })
+            elif event.event_type == 'REQUEST_ARRIVAL':
+                data = event.event_data
+                rid = data.get('request_id')
+                request_time = data.get('request_time')
+                if rid and request_time:
+                    arrivals[rid] = request_time
+            elif event.event_type == 'ROUTING_DECISION':
+                data = event.event_data
+                rid = data.get('request_id')
+                routing_decision = data.get('routing_decision') or {}
+                if rid and isinstance(routing_decision, dict):
+                    routing_times[rid] = {
+                        'estimated_pickup_time': routing_decision.get('estimated_pickup_time'),
+                        'estimated_dropoff_time': routing_decision.get('estimated_dropoff_time'),
+                    }
 
         trip_records: List[Dict[str, Any]] = []
         for trip in trips:
@@ -444,12 +511,19 @@ class EventLogger:
             if not vehicle_id or not start_loc or not pickup_loc or not dropoff_loc:
                 continue
 
+            request_time = arrivals.get(rid)
+            estimated_times = routing_times.get(rid, {})
+            assignment_time = assignment.get('assignment_time') or request_time
+
             trip_records.append({
                 'request_id': rid,
                 'vehicle_id': vehicle_id,
-                'assignment_time': assignment.get('assignment_time'),
+                'request_time': request_time,
+                'assignment_time': assignment_time,
                 'pickup_time': trip.get('pickup_time'),
                 'completion_time': trip.get('completion_time'),
+                'estimated_pickup_time': estimated_times.get('estimated_pickup_time'),
+                'estimated_dropoff_time': estimated_times.get('estimated_dropoff_time'),
                 'eta_minutes': assignment.get('eta_minutes'),
                 'trip_time_minutes': trip.get('trip_time_minutes'),
                 'vehicle_start': start_loc,
@@ -517,8 +591,11 @@ class EventLogger:
     const markers = new Map(); // vehicle_id -> marker
     const statuses = new Map(); // vehicle_id -> status string
     const polylines = new Map(); // vehicle_id -> current segment polyline
+    const lastSegByVehicle = new Map(); // vehicle_id -> segment object (reference)
     let playing = false;
     let timerId = null;
+    let statusRendered = false;
+    let lastStatusRenderAt = 0;
     const statusEl = document.getElementById('status');
     const statusListEl = document.getElementById('vehicleStatus');
     const deadheadTotalEl = document.getElementById('deadheadTotal');
@@ -573,20 +650,41 @@ class EventLogger:
     }}
 
     for (const rec of tripRecords) {{
-      const assignMs = parseIso(rec.assignment_time);
+      // Assignment time (authoritative when present, otherwise derived from request/routing).
+      let assignMs = parseIso(rec.assignment_time);
+      if (assignMs === null) {{
+        assignMs = parseIso(rec.request_time);
+      }}
+      if (assignMs === null) {{
+        const estPickup = parseIso(rec.estimated_pickup_time);
+        if (estPickup !== null) {{
+          const eta = rec.eta_minutes == null ? null : Number(rec.eta_minutes);
+          assignMs = eta === null ? estPickup : addMinutes(estPickup, -eta);
+        }}
+      }}
       if (assignMs === null) continue;
 
+      // Pickup time (authoritative when present, otherwise estimated).
       let pickupMs = parseIso(rec.pickup_time);
+      if (pickupMs === null) {{
+        pickupMs = parseIso(rec.estimated_pickup_time);
+      }}
       if (pickupMs === null) {{
         const eta = rec.eta_minutes == null ? 5.0 : Number(rec.eta_minutes);
         pickupMs = addMinutes(assignMs, eta);
       }}
+      if (pickupMs === null) continue;
 
+      // Completion time (authoritative when present, otherwise estimated).
       let doneMs = parseIso(rec.completion_time);
+      if (doneMs === null) {{
+        doneMs = parseIso(rec.estimated_dropoff_time);
+      }}
       if (doneMs === null) {{
         const tm = rec.trip_time_minutes == null ? 8.0 : Number(rec.trip_time_minutes);
         doneMs = addMinutes(pickupMs, tm);
       }}
+      if (doneMs === null) continue;
 
       ensureVehicle(rec.vehicle_id, rec.vehicle_start);
       const v = vehicles.get(rec.vehicle_id);
@@ -650,21 +748,33 @@ class EventLogger:
     function setVehicleVisual(vehicleId, state, loc, seg) {{
       const marker = markers.get(vehicleId);
       if (marker && loc) marker.setLatLng([loc.latitude, loc.longitude]);
-      statuses.set(vehicleId, state);
 
-      if (polylines.has(vehicleId)) {{
-        map.removeLayer(polylines.get(vehicleId));
-        polylines.delete(vehicleId);
+      const prevState = statuses.get(vehicleId);
+      const stateChanged = prevState !== state;
+      if (stateChanged) {{
+        statuses.set(vehicleId, state);
       }}
-      if (seg && seg.from && seg.to) {{
-        const color = state === 'to_pickup' ? '#ff3b30' : '#34c759';
-        const poly = L.polyline([[seg.from.latitude, seg.from.longitude], [seg.to.latitude, seg.to.longitude]], {{
-          color: color,
-          weight: 2,
-          opacity: 0.35
-        }}).addTo(map);
-        polylines.set(vehicleId, poly);
+
+      const prevSeg = lastSegByVehicle.get(vehicleId) || null;
+      const segChanged = prevSeg !== seg;
+      if (segChanged) {{
+        if (polylines.has(vehicleId)) {{
+          map.removeLayer(polylines.get(vehicleId));
+          polylines.delete(vehicleId);
+        }}
+        if (seg && seg.from && seg.to) {{
+          const color = state === 'to_pickup' ? '#ff3b30' : '#34c759';
+          const poly = L.polyline([[seg.from.latitude, seg.from.longitude], [seg.to.latitude, seg.to.longitude]], {{
+            color: color,
+            weight: 2,
+            opacity: 0.35
+          }}).addTo(map);
+          polylines.set(vehicleId, poly);
+        }}
+        lastSegByVehicle.set(vehicleId, seg || null);
       }}
+
+      return stateChanged || segChanged;
     }}
 
     function updateCounts() {{
@@ -679,6 +789,7 @@ class EventLogger:
 
     function fracToTime(frac) {{
       if (globalStart === null || globalEnd === null) return null;
+      if (globalEnd <= globalStart) return globalStart;
       const clamped = Math.max(0, Math.min(1, frac));
       return Math.round(globalStart + clamped * (globalEnd - globalStart));
     }}
@@ -691,25 +802,34 @@ class EventLogger:
     function setTime(tMs) {{
       if (tMs === null || globalStart === null || globalEnd === null) return;
       const clamped = Math.max(globalStart, Math.min(globalEnd, tMs));
-      const frac = (clamped - globalStart) / (globalEnd - globalStart);
+      const denom = (globalEnd - globalStart);
+      const frac = denom > 0 ? ((clamped - globalStart) / denom) : 0;
       timeSlider.value = String(Math.round(frac * 1000));
       timeLabel.textContent = formatTime(clamped);
 
+      let anyChanged = false;
       for (const [vehicleId, v] of vehicles.entries()) {{
         ensureMarker(vehicleId, v.initial || (v.segments[0] && v.segments[0].from));
         const s = stateAtTime(v, clamped);
-        setVehicleVisual(vehicleId, s.state, s.loc, s.seg);
+        const changed = setVehicleVisual(vehicleId, s.state, s.loc, s.seg);
+        if (changed) anyChanged = true;
       }}
-      renderStatusList();
-      updateCounts();
+      const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+      const shouldRender = (!statusRendered) || (anyChanged && (now - lastStatusRenderAt) >= 250);
+      if (shouldRender) {{
+        renderStatusList();
+        updateCounts();
+        statusRendered = true;
+        lastStatusRenderAt = now;
+      }}
     }}
 
     function startPlayback() {{
       if (playing || globalStart === null || globalEnd === null) return;
       playing = true;
       setStatusText('Playing');
-      const tickMs = 75;
-      const simStepMs = 15 * 1000; // 15 simulated seconds per tick
+      const tickMs = 100;
+      const simStepMs = 30 * 1000; // 30 simulated seconds per tick
       timerId = setInterval(() => {{
         const t = sliderToTime();
         if (t === null) return;
@@ -737,9 +857,12 @@ class EventLogger:
       stopPlayback();
       for (const poly of polylines.values()) map.removeLayer(poly);
       polylines.clear();
+      lastSegByVehicle.clear();
       for (const m of markers.values()) map.removeLayer(m);
       markers.clear();
       statuses.clear();
+      statusRendered = false;
+      lastStatusRenderAt = 0;
       if (globalStart !== null) setTime(globalStart);
       setStatusText('Ready');
     }}
