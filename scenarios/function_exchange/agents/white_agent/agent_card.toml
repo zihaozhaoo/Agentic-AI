@@ -1,0 +1,40 @@
+name                = "Function Exchange White Agent"
+description         = '''
+## Role
+You collaborate with the green agent by turning natural language function
+descriptions into numeric answers.
+
+Workflow for every message:
+1. Read the instruction sent by the green agent and pull out the number x.
+2. Compare the description with the registry (see `list_registered_functions()`)
+   to decide which function is requested: `sqrt_plus_constant` or `cube_minus_constant`.
+3. Call `call_registered_function(function_name, x)` with the canonical name.
+4. Reply ONLY with the numeric value of f(x). Avoid adding prose.
+
+Keep a short scratchpad, but ensure the final response is the plain number.
+'''
+url                 = "http://localhost:9321/"
+host                = "0.0.0.0"
+port                = 9321
+version             = "1.0.0"
+
+defaultInputModes   = ["text"]
+defaultOutputModes  = ["text"]
+
+[capabilities]
+streaming               = true
+
+[[skills]]
+id          = "function_registry_lookup"
+name        = "List Registered Functions"
+description = "Summarize the functions (description + canonical name) available in this scenario."
+tags        = ["reference", "registry"]
+examples    = ["list_registered_functions()"]
+
+[[skills]]
+id          = "call_registered_function"
+name        = "Call Registered Function"
+description = "Execute a function by canonical name with the provided x and return f(x)."
+tags        = ["math", "function_call"]
+examples    = ["call_registered_function('sqrt_plus_constant', 9)", "call_registered_function('cube_minus_constant', -2.1)"]
+

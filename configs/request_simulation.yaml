@@ -1,0 +1,58 @@
+# Configuration for Request Simulation Module
+
+# Data paths
+data:
+  taxi_zone_lookup: "taxi_zone_lookup.csv"
+  parquet_file: "../fhvhv_tripdata_2025-01.parquet"
+  output_dir: "data/output"
+  cache_dir: "data/cache"
+
+# Data preprocessing
+preprocessing:
+  sample_size: 10000  # Number of trips to sample (null = all)
+  dev_size: 5000      # Development set size
+  val_size: 2500      # Validation set size
+  test_size: 2500     # Test set size
+  time_based_split: true  # Use time-based or random split
+
+# Location augmentation
+location_augmentation:
+  enabled: false  # Set to true to use Google Maps API (expensive)
+  use_cache: true  # Cache geocoding results
+  use_smart_sampling: true  # Sample multiple candidates for better distance matching
+  num_origin_samples: 3  # Number of origin candidates to sample
+  num_dest_samples: 3  # Number of destination candidates to sample
+  rate_limit_delay: 0.1  # Delay between API calls (seconds)
+  distance_tolerance: 0.3  # Acceptable distance error (30%)
+
+# Customer profiles
+customer_profiles:
+  num_profiles: 500  # Number of synthetic customer profiles
+  probability_personal: 0.3  # Probability of using personal location reference
+
+# Natural language generation
+nl_generation:
+  template_ratio: 0.5  # 50% template, 50% LLM
+  llm_provider: "openai"  # "openai" or "anthropic"
+  llm_model: null  # null = use default (gpt-4o-mini or claude-3-haiku)
+  llm_rate_limit_delay: 0.5  # Delay between LLM API calls
+
+# Template tiers probabilities (must sum to 1.0)
+template_tiers:
+  basic: 0.30
+  poi_based: 0.25
+  time_constrained: 0.20
+  multi_stop: 0.10
+  complex: 0.15
+
+# Simulation settings
+simulation:
+  n_requests: 1000  # Number of requests to generate
+  save_intermediate: true  # Save POI DB, customer profiles, etc.
+  output_format: "json"  # "json" or "parquet"
+
+# API keys (can also be set via environment variables)
+api_keys:
+  google_maps: null  # Set to your API key or use GOOGLE_MAPS_API_KEY env var
+  openai: null  # Set to your API key or use OPENAI_API_KEY env var
+  anthropic: null  # Set to your API key or use ANTHROPIC_API_KEY env var

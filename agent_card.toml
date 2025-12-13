@@ -1,0 +1,20 @@
+name = "Regex Baseline Agent"
+description = """
+You are a baseline agent for the Agentic-AI ride hailing system.
+You parse natural language ride requests into structured data using regex and keyword matching.
+"""
+url = "http://localhost:8001"
+version = "1.0.0"
+
+defaultInputModes = ["text"]
+defaultOutputModes = ["text"]
+
+[capabilities]
+streaming = true
+
+[[skills]]
+id = "parse_request"
+name = "Parse Ride Request"
+description = "Parses a natural language ride request into structured format."
+tags = ["parsing", "transportation"]
+examples = ["I need a ride from JFK to Times Square"]

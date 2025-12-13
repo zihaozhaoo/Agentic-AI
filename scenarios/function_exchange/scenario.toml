@@ -1,0 +1,42 @@
+[scenario]
+name = "function_exchange"
+description = "Two-agent math function verification scenario"
+version = "1.0.0"
+
+[[agents]]
+name = "Function Exchange White Agent"
+card = "agents/white_agent/agent_card.toml"
+launcher_host = "0.0.0.0"
+launcher_port = 9320
+agent_host = "0.0.0.0"
+agent_port = 9321
+model_type = "openai"
+model_name = "o4-mini"
+tools = ["agents/white_agent/tools.py"]
+mcp_servers = []
+
+[[agents]]
+name = "Function Exchange Green Agent"
+card = "agents/green_agent/agent_card.toml"
+launcher_host = "0.0.0.0"
+launcher_port = 9310
+agent_host = "0.0.0.0"
+agent_port = 9311
+model_type = "openai"
+model_name = "o4-mini"
+tools = ["agents/green_agent/tools.py"]
+mcp_servers = []
+is_green = true
+
+[[agents.participant_requirements]]
+role = "function_solver"
+name = "white_function_solver"
+required = true
+participant_agent = "Function Exchange White Agent"
+
+[launch]
+mode = "separate"
+tmux_session_name = "agentbeats-function-exchange"
+startup_interval = 1
+wait_for_services = true
+
