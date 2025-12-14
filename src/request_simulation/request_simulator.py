@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 import json
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from .data_preprocessing import NYCTripDataPreprocessor
 from .poi_database import POIDatabase
@@ -256,7 +256,10 @@ class RequestSimulator:
         n_requests: Optional[int] = None,
         augment_location: bool = False,
         use_smart_sampling: bool = True,
-        save_output: Optional[str] = None
+        save_output: Optional[str] = None,
+        mean_interarrival_seconds: Optional[float] = 15.0,
+        start_time: Optional[datetime] = None,
+        uniform_zone_sampling: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Simulate natural language requests for a batch of trips.
@@ -267,12 +270,35 @@ class RequestSimulator:
             augment_location: Whether to augment with exact coordinates
             use_smart_sampling: Whether to use smart sampling for location augmentation
             save_output: Optional path to save output JSON
+            mean_interarrival_seconds: Target mean interarrival time between requests (in seconds).
+                Smaller values create busier periods with fewer idle vehicles. Set to None to keep
+                original timestamps from the dataset.
+            start_time: Optional start time for rescheduled requests. Defaults to earliest
+                request time in the sampled DataFrame or now() if missing.
+            uniform_zone_sampling: If True, sample pickup zones uniformly to avoid clustering
+                around historical hotspots.
 
         Returns:
             List of simulated request dictionaries
         """
-        if n_requests is not None:
-            df = df.head(n_requests)
+        # Balanced sampling to avoid concentrated pickup zones
+        df = self._sample_requests(
+            df,
+            n_requests=n_requests or len(df),
+            uniform_zone_sampling=uniform_zone_sampling
+        )
+
+        # Keep a copy of the original request timestamps for duration alignment when rescheduling
+        original_request_times = df['request_datetime'].copy() if 'request_datetime' in df.columns else None
+
+        # Densify request arrival times to keep vehicles busy and create overlapping trips
+        if mean_interarrival_seconds is not None:
+            df = self._reschedule_request_times(
+                df=df,
+                original_request_times=original_request_times,
+                start_time=start_time,
+                mean_interarrival_seconds=mean_interarrival_seconds
+            )
 
         print(f"\nSimulating {len(df)} ride requests...")
         print(f"  - Template ratio: {self.template_ratio * 100:.0f}%")
@@ -280,6 +306,9 @@ class RequestSimulator:
         print(f"  - Location augmentation: {'ON' if augment_location else 'OFF'}")
         if augment_location:
             print(f"  - Smart sampling: {'ON' if use_smart_sampling else 'OFF'}")
+        if mean_interarrival_seconds is not None:
+            print(f"  - Mean interarrival: {mean_interarrival_seconds:.0f} seconds")
+        print(f"  - Uniform pickup zones: {'ON' if uniform_zone_sampling else 'OFF'}")
         print()
 
         # Store use_smart_sampling for augment_trip_with_context
@@ -306,6 +335,139 @@ class RequestSimulator:
             self.save_requests(requests, save_output)
 
         return requests
+
+    def _sample_requests(
+        self,
+        df: pd.DataFrame,
+        n_requests: int,
+        uniform_zone_sampling: bool
+    ) -> pd.DataFrame:
+        """
+        Sample requests with optional uniform pickup zone weighting.
+
+        Args:
+            df: Preprocessed trip DataFrame
+            n_requests: Number of requests to sample (with replacement if needed)
+            uniform_zone_sampling: Whether to flatten pickup zone distribution
+
+        Returns:
+            Sampled DataFrame
+        """
+        if n_requests <= 0:
+            return df.head(0)
+
+        # Compute weights to balance pickup zones
+        weights = None
+        if uniform_zone_sampling and 'PULocationID' in df.columns:
+            weights = self._compute_zone_balanced_weights(df['PULocationID'])
+
+        replace = n_requests > len(df)
+        sampled = df.sample(
+            n=n_requests,
+            replace=replace,
+            weights=weights,
+            random_state=42
+        ).reset_index(drop=True)
+        return sampled
+
+    def _compute_zone_balanced_weights(self, pu_series: pd.Series) -> pd.Series:
+        """
+        Build inverse-frequency weights to sample pickup zones more uniformly.
+
+        Args:
+            pu_series: Series of pickup zone IDs
+
+        Returns:
+            Series of normalized weights aligned with the input index
+        """
+        counts = pu_series.value_counts()
+        # Inverse frequency; rare zones get higher weight
+        inv_freq = pu_series.map(lambda x: 1.0 / counts.get(x, 1))
+        normalized = inv_freq / inv_freq.sum()
+        return normalized
+
+    def _reschedule_request_times(
+        self,
+        df: pd.DataFrame,
+        original_request_times: Optional[pd.Series],
+        start_time: Optional[datetime],
+        mean_interarrival_seconds: float
+    ) -> pd.DataFrame:
+        """
+        Reschedule request timestamps to produce a high-demand arrival process.
+
+        Args:
+            df: DataFrame of sampled trips
+            original_request_times: Original request_datetime column (if present)
+            start_time: Optional fixed start time for the first request
+            mean_interarrival_seconds: Mean interarrival time to target
+
+        Returns:
+            DataFrame with updated request/related timestamps
+        """
+        # Work on a copy to avoid mutating caller state
+        df_out = df.copy()
+
+        # Choose a deterministic base to anchor the dense timeline
+        base_time = start_time
+        if base_time is None:
+            if original_request_times is not None and len(original_request_times) > 0:
+                base_time = original_request_times.min().to_pydatetime()
+            else:
+                base_time = datetime.now()
+
+        # Build exponential interarrival times to mimic high-utilization demand
+        interarrivals = np.random.exponential(scale=mean_interarrival_seconds, size=len(df_out))
+        cumulative_seconds = np.cumsum(interarrivals)
+        new_request_times = [base_time + timedelta(seconds=float(s)) for s in cumulative_seconds]
+        df_out['request_datetime'] = new_request_times
+
+        # Shift related pickup/dropoff timestamps to maintain realistic offsets
+        if original_request_times is not None:
+            time_offsets = original_request_times.reset_index(drop=True)
+            df_out = self._shift_time_columns(df_out, time_offsets, new_request_times)
+
+        return df_out
+
+    def _shift_time_columns(
+        self,
+        df: pd.DataFrame,
+        original_request_times: pd.Series,
+        new_request_times: List[datetime]
+    ) -> pd.DataFrame:
+        """
+        Shift downstream timestamps (pickup/dropoff windows) to stay consistent with the new request time.
+
+        Args:
+            df: DataFrame with timing columns
+            original_request_times: Original request times from the source data
+            new_request_times: New dense request times
+
+        Returns:
+            DataFrame with adjusted pickup/dropoff related columns
+        """
+        df_out = df.copy()
+        columns_to_shift = [
+            'pickup_datetime',
+            'dropoff_datetime',
+            'requested_pickup_time',
+            'requested_dropoff_time'
+        ]
+
+        # Compute per-row offsets and apply them to the new arrival time
+        for col in columns_to_shift:
+            if col not in df_out.columns:
+                continue
+            offsets = df_out[col] - original_request_times
+            shifted = []
+            for idx, offset in enumerate(offsets):
+                if pd.isna(offset):
+                    shifted.append(None)
+                    continue
+                shifted.append(new_request_times[idx] + offset)
+            df_out[col] = shifted
+
+        return df_out
 
     def save_requests(self, requests: List[Dict[str, Any]], filepath: str):
         """

@@ -177,10 +177,17 @@ def _resolve_networking(default_host: str, default_port: int, default_path: str 
     https_enabled = os.environ.get("HTTPS_ENABLED", "").lower() in ("1", "true", "yes")
     scheme = "https" if https_enabled else "http"
 
+    # Priority 1: AGENT_URL set by controller (for agentbeats run_ctrl mode)
+    agent_url = os.environ.get("AGENT_URL")
+    if agent_url:
+        return host, port, agent_url
+
+    # Priority 2: PUBLIC_URL explicitly set by user
     public_url = os.environ.get("PUBLIC_URL")
     if public_url:
         return host, port, public_url
 
+    # Priority 3: Construct from CLOUDRUN_HOST + CLOUDRUN_PATH
     cloudrun_host = os.environ.get("CLOUDRUN_HOST")
     path = os.environ.get("CLOUDRUN_PATH", default_path or "")
     if path and not path.startswith("/"):
@@ -189,6 +196,7 @@ def _resolve_networking(default_host: str, default_port: int, default_path: str 
         cloudrun_host = cloudrun_host.rstrip("/")
         return host, port, f"{scheme}://{cloudrun_host}{path}"
 
+    # Priority 4: Default to localhost
     return host, port, f"{scheme}://{host}:{port}"
 
 
