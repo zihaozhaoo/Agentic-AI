@@ -35,6 +35,7 @@ from white_agent import (  # noqa: E402
     RandomBaselineAgent,
     NearestVehicleBaselineAgent,
     RemoteWhiteAgent,
+    NaturalLanguageAgent
 )
 
 
@@ -47,15 +48,15 @@ def load_agent_card(agent_name: str, public_url: str) -> AgentCard:
     return AgentCard(**card_dict)
 
 
-def pick_agent(name: str):
+def pick_agent(name: str, customer_db=None):
     name = name.lower()
     if name == "dummy":
-        return DummyWhiteAgent(agent_name="DummyAgent (v2)")
+        return DummyWhiteAgent(agent_name="DummyAgent (v2)", customer_db=customer_db)
     if name == "regex":
-        return RegexBaselineAgent(agent_name="RegexBaseline (v2)")
+        return RegexBaselineAgent(agent_name="RegexBaseline (v2)", customer_db=customer_db)
     if name == "random":
-        return RandomBaselineAgent(agent_name="RandomBaseline (v2)")
-    return NearestVehicleBaselineAgent(agent_name="NearestVehicleBaseline (v2)")
+        return RandomBaselineAgent(agent_name="RandomBaseline (v2)", customer_db=customer_db)
+    return NearestVehicleBaselineAgent(agent_name="NearestVehicleBaseline (v2)", customer_db=customer_db)
 
 
 class RideGreenExecutor(AgentExecutor):
@@ -94,7 +95,7 @@ class RideGreenExecutor(AgentExecutor):
         # Build environment
         request_simulator = RequestSimulator(
             taxi_zone_lookup_path=str(taxi_zone_lookup),
-            template_ratio=1.0,
+            template_ratio=0,
         )
         logger = EventLogger(
             log_file_path=str(project_root / "logs" / "agentbeats_v2.log"),
@@ -116,13 +117,16 @@ class RideGreenExecutor(AgentExecutor):
         requests = environment.generate_requests_from_data(
             parquet_path=str(parquet_file),
             n_requests=num_requests,
-            augment_location=False,
+            augment_location=True,
         )
 
         # Select agent: if remote URL provided, use DummyWhiteAgent to force perfect parsing (cheat).
         # Otherwise use chosen baseline locally.
         if remote_white_url:
-            white_agent = DummyWhiteAgent(agent_name="DummyAgent (cheat)")
+            white_agent = NaturalLanguageAgent(
+                agent_name="NaturalLanguageAgent",
+                customer_db=request_simulator.customer_db
+            )
             await event_queue.enqueue_event(
                 new_agent_text_message(
                     f"Using dummy white agent (cheating with ground truth); remote URL {remote_white_url} ignored.",
@@ -130,7 +134,7 @@ class RideGreenExecutor(AgentExecutor):
                 )
             )
         else:
-            white_agent = pick_agent(agent_name)
+            white_agent = pick_agent(agent_name, customer_db=request_simulator.customer_db)
 
         timestamp = Path().cwd().name  # keep unique-ish identifier
         agent_slug = white_agent.agent_name.lower().replace(" ", "_")

@@ -17,7 +17,7 @@ preprocessing:
 
 # Location augmentation
 location_augmentation:
-  enabled: false  # Set to true to use Google Maps API (expensive)
+  enabled: true  # Set to true to use Google Maps API (expensive)
   use_cache: true  # Cache geocoding results
   use_smart_sampling: true  # Sample multiple candidates for better distance matching
   num_origin_samples: 3  # Number of origin candidates to sample
@@ -53,6 +53,6 @@ simulation:
 
 # API keys (can also be set via environment variables)
 api_keys:
-  google_maps: null  # Set to your API key or use GOOGLE_MAPS_API_KEY env var
-  openai: null  # Set to your API key or use OPENAI_API_KEY env var
+  google_maps: AIzaSyDY9Pnh7vlT7yo1AF9C_TsBxLopNLPj_LA  # Set to your API key or use GOOGLE_MAPS_API_KEY env var
+  openai: 9slZpa1T9BNIbHbkGWq7lSHa3Mft7chKpgx8DPhznOKGLX_Rw2Bqb5rT3BlbkFJMkJ6kp7kSv7RmeVoBUe2oTmuQO09JA3ag1QSoaafa_2n64oFR4Uvml1Wy0jXEC7s8c1VCWfnsA  # Set to your API key or use OPENAI_API_KEY env var
   anthropic: null  # Set to your API key or use ANTHROPIC_API_KEY env var

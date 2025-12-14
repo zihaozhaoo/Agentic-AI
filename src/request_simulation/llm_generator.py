@@ -65,6 +65,9 @@ Requirements:
 - Include reasons for trips occasionally
 - Use different ways to refer to locations (address, landmark, neighborhood, personal reference)
 - When multiple location options are provided, prefer the most accurate one (addresses > POIs > zones)
+- IMPORTANT: ALWAYS clearly specify BOTH the pickup location AND the destination in the request
+- Make sure both origin and destination are unambiguous and specific
+- When using zone names or neighborhoods, include "NYC" or borough context to clarify this is in New York City
 - Keep it realistic to what someone would actually say
 
 Generate ONLY the request text, nothing else."""

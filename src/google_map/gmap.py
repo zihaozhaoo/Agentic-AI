@@ -4,7 +4,7 @@ import googlemaps
 
 
 def get_google_maps_client():
-    api_key = "AIzaSyASdmnEivZx-7u6s8tRQn4UbPZ8E9SDe8Y"
+    api_key = None
     if not api_key:
         print("Missing GOOGLE_MAPS_API_KEY environment variable.", file=sys.stderr)
         sys.exit(1)

@@ -7,6 +7,7 @@ Main orchestrator that coordinates all components of the evaluation system.
 from typing import Optional, List, Dict, Any, Callable
 from datetime import datetime, timedelta
 import json
+import math
 from pathlib import Path
 import random
 import time
@@ -294,6 +295,19 @@ class GreenAgentEnvironment:
 
                 # Log trip completion
                 if trip_result:
+                    # Get ground truth coordinates
+                    ground_truth_pickup = None
+                    ground_truth_dropoff = None
+                    if nl_request.ground_truth:
+                        ground_truth_pickup = {
+                            'latitude': nl_request.ground_truth.origin.latitude,
+                            'longitude': nl_request.ground_truth.origin.longitude
+                        }
+                        ground_truth_dropoff = {
+                            'latitude': nl_request.ground_truth.destination.latitude,
+                            'longitude': nl_request.ground_truth.destination.longitude
+                        }
+
                     self.logger.log_trip_completion(
                         vehicle_id=routing_decision.vehicle_id,
                         request_id=nl_request.request_id,
@@ -308,7 +322,9 @@ class GreenAgentEnvironment:
                         dropoff_location={
                             'latitude': parsed_request.destination.latitude,
                             'longitude': parsed_request.destination.longitude
-                        }
+                        },
+                        pickup_location_ground_truth=ground_truth_pickup,
+                        dropoff_location_ground_truth=ground_truth_dropoff
                     )
 
                 # Evaluate request
@@ -324,11 +340,26 @@ class GreenAgentEnvironment:
                 deadhead_miles = trip_result.get('deadhead_miles', 0) if trip_result else 0
                 denom = trip_miles + deadhead_miles
                 trip_share = (trip_miles / denom) if denom > 0 else 0
-                parse_ok = False
-                if parsed_request.origin.zone_id and nl_request.ground_truth and nl_request.ground_truth.origin.zone_id:
-                    parse_ok = parsed_request.origin.zone_id == nl_request.ground_truth.origin.zone_id
-                if parsed_request.destination.zone_id and nl_request.ground_truth and nl_request.ground_truth.destination.zone_id:
-                    parse_ok = parse_ok and (parsed_request.destination.zone_id == nl_request.ground_truth.destination.zone_id)
+
+                # Calculate distance errors between parsed and ground truth locations
+                origin_distance_error = float('inf')
+                destination_distance_error = float('inf')
+                if nl_request.ground_truth:
+                    origin_distance_error = self._calculate_distance(
+                        parsed_request.origin.latitude,
+                        parsed_request.origin.longitude,
+                        nl_request.ground_truth.origin.latitude,
+                        nl_request.ground_truth.origin.longitude
+                    )
+                    destination_distance_error = self._calculate_distance(
+                        parsed_request.destination.latitude,
+                        parsed_request.destination.longitude,
+                        nl_request.ground_truth.destination.latitude,
+                        nl_request.ground_truth.destination.longitude
+                    )
+
+                # Parse OK if both distance errors are < 100 miles (matches evaluator logic)
+                parse_ok = (origin_distance_error < 100 and destination_distance_error < 100)
                 per_request_score = (1.0 if parse_ok else 0.0) * trip_share
                 self.logger.log_event(
                     'REQUEST_SCORE',
@@ -337,7 +368,9 @@ class GreenAgentEnvironment:
                         'score': per_request_score,
                         'trip_miles': trip_miles,
                         'deadhead_miles': deadhead_miles,
-                        'parse_ok': parse_ok
+                        'parse_ok': parse_ok,
+                        'origin_distance_error_miles': origin_distance_error,
+                        'destination_distance_error_miles': destination_distance_error
                     }
                 )
 
@@ -477,6 +510,36 @@ class GreenAgentEnvironment:
 
         print(f"\nResults saved to {output_path}")
 
+    def _calculate_distance(
+        self,
+        lat1: float,
+        lon1: float,
+        lat2: float,
+        lon2: float
+    ) -> float:
+        """
+        Calculate Haversine distance between two points.
+
+        Args:
+            lat1, lon1: First point
+            lat2, lon2: Second point
+
+        Returns:
+            Distance in miles
+        """
+        R = 3959.0  # Earth radius in miles
+
+        lat1_rad = math.radians(lat1)
+        lat2_rad = math.radians(lat2)
+        delta_lat = math.radians(lat2 - lat1)
+        delta_lon = math.radians(lon2 - lon1)
+
+        a = (math.sin(delta_lat / 2) ** 2 +
+             math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lon / 2) ** 2)
+        c = 2 * math.asin(math.sqrt(a))
+
+        return R * c
+
     def _get_zone_center(self, zone_id: int, zone_name: str = None) -> tuple[float, float]:
         """
         Get approximate center coordinates for a taxi zone.
@@ -602,6 +665,7 @@ class GreenAgentEnvironment:
             request_id=str(request_data.get('trip_id', '')),
             request_time=request_data.get('request_time', datetime.now()),
             natural_language_text=nl_text,
+            customer_id=request_data.get('customer_id'),
             ground_truth=ground_truth
         )
 

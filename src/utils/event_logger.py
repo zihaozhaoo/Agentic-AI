@@ -180,7 +180,9 @@ class EventLogger:
         fare: float,
         deadhead_miles: float,
         pickup_location: Optional[Dict[str, Any]] = None,
-        dropoff_location: Optional[Dict[str, Any]] = None
+        dropoff_location: Optional[Dict[str, Any]] = None,
+        pickup_location_ground_truth: Optional[Dict[str, Any]] = None,
+        dropoff_location_ground_truth: Optional[Dict[str, Any]] = None
     ):
         """Log trip completion (optionally with coordinates for mapping)."""
         self.log_event('TRIP_COMPLETE', {
@@ -191,6 +193,11 @@ class EventLogger:
             'fare': fare,
             'deadhead_miles': deadhead_miles,
             'net_revenue': fare - (deadhead_miles * 0.50),
+            'pickup_location_parsed': pickup_location,
+            'dropoff_location_parsed': dropoff_location,
+            'pickup_location_ground_truth': pickup_location_ground_truth,
+            'dropoff_location_ground_truth': dropoff_location_ground_truth,
+            # Keep backward compatibility
             'pickup_location': pickup_location,
             'dropoff_location': dropoff_location
         })
@@ -207,12 +214,18 @@ class EventLogger:
         ground_truth: Optional[Dict[str, Any]] = None
     ):
         """Log new request arrival."""
-        self.log_event('REQUEST_ARRIVAL', {
+        event_data = {
             'request_id': request_id,
             'request_time': request_time.isoformat(),
             'natural_language_text': natural_language_text,
             'has_ground_truth': ground_truth is not None
-        })
+        }
+
+        # Include full ground truth data if available
+        if ground_truth:
+            event_data['ground_truth'] = ground_truth
+
+        self.log_event('REQUEST_ARRIVAL', event_data)
 
     def log_parsing_result(
         self,

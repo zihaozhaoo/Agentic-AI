@@ -12,7 +12,7 @@ from .data_structures import (
     NaturalLanguageRequest,
     RequestPriority
 )
-from .base_agent import WhiteAgentBase, DummyWhiteAgent
+from .base_agent import WhiteAgentBase, DummyWhiteAgent, NaturalLanguageAgent
 from .baseline_agents import RandomBaselineAgent, RegexBaselineAgent, NearestVehicleBaselineAgent
 from .remote_agent import RemoteWhiteAgent
 

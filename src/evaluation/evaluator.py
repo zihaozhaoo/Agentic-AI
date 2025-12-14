@@ -330,7 +330,9 @@ class Evaluator:
         })
 
         # Custom per-request score: parse correctness * trip_share_of_total_miles
-        parse_ok = parsing_eval.get('origin_zone_correct') and parsing_eval.get('destination_zone_correct')
+        # Modified: parse_ok based on coordinate distance < 1 mile for both origin and destination
+        parse_ok = (parsing_eval.get('origin_distance_error_miles', float('inf')) < 1 and
+                    parsing_eval.get('destination_distance_error_miles', float('inf')) < 1)
         trip_miles = (trip_result or {}).get('trip_distance', 0.0)
         deadhead_miles = (trip_result or {}).get('deadhead_miles', 0.0)
         denom = trip_miles + deadhead_miles

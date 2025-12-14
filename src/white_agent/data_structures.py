@@ -158,6 +158,9 @@ class NaturalLanguageRequest:
     request_time: datetime
     natural_language_text: str
 
+    # Customer information (for resolving personal location references)
+    customer_id: Optional[str] = None
+
     # Ground truth (hidden from white agent, used for evaluation)
     ground_truth: Optional[StructuredRequest] = None
 
@@ -167,4 +170,5 @@ class NaturalLanguageRequest:
             'request_id': self.request_id,
             'request_time': self.request_time.isoformat(),
             'natural_language_text': self.natural_language_text,
+            'customer_id': self.customer_id,
         }
