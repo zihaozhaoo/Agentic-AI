@@ -116,7 +116,7 @@ class RideGreenExecutor(AgentExecutor):
         requests = environment.generate_requests_from_data(
             parquet_path=str(parquet_file),
             n_requests=num_requests,
-            augment_location=False,
+            augment_location=True,
         )
 
         # Select agent: if remote URL provided, use DummyWhiteAgent to force perfect parsing (cheat).

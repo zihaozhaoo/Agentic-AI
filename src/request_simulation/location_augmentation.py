@@ -71,9 +71,15 @@ class LocationAugmenter:
 
         # Initialize Google Maps client
         if google_maps_api_key is None:
-            # Use the API key from existing gmap.py
-            google_maps_api_key = "AIzaSyASdmnEivZx-7u6s8tRQn4UbPZ8E9SDe8Y"
-            logger.warning("Using hardcoded Google Maps API key - consider using environment variable")
+            # Try to read from environment variable first
+            import os
+            google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+            if google_maps_api_key is None:
+                # Fallback to hardcoded key
+                google_maps_api_key = "AIzaSyASdmnEivZx-7u6s8tRQn4UbPZ8E9SDe8Y"
+                logger.warning("Using hardcoded Google Maps API key - consider setting GOOGLE_MAPS_API_KEY environment variable")
+            else:
+                logger.info("Using Google Maps API key from GOOGLE_MAPS_API_KEY environment variable")
 
         if GOOGLEMAPS_AVAILABLE:
             self.gmaps = googlemaps.Client(key=google_maps_api_key)
