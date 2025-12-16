@@ -5,10 +5,14 @@ import datetime
 import tomllib
 from typing import Optional, List, Any
 import sys
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Agentic-AI imports
 # Assuming this script is run from the root of Agentic-AI
-from src.white_agent.baseline_agents import RegexBaselineAgent
+from src.white_agent.base_agent import NaturalLanguageAgent
 from src.white_agent.data_structures import NaturalLanguageRequest, StructuredRequest
 
 # AgentBeats imports
@@ -26,8 +30,8 @@ class CustomAgentExecutor(AgentBeatsExecutor):
         super().__init__(agent_card_json, model_type, model_name, mcp_url_list, tool_list)
         
         # Initialize the specific agent
-        # We might need config, but for baseline it's optional
-        self.white_agent = RegexBaselineAgent()
+        # NaturalLanguageAgent requires OPENAI_API_KEY and GOOGLE_MAPS_API_KEY environment variables
+        self.white_agent = NaturalLanguageAgent()
         print(f"Initialized {self.white_agent.agent_name}")
 
     async def invoke_agent(self, context: RequestContext) -> str:

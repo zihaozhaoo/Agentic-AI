@@ -4,9 +4,11 @@ import tomllib
 import dotenv
 import uvicorn
 import os
+import sys
 from pathlib import Path
 import json
 import math
+from datetime import datetime
 from starlette.responses import JSONResponse
 
 from a2a.server.apps import A2AStarletteApplication
@@ -18,7 +20,15 @@ from a2a.types import AgentCard
 from a2a.utils import new_agent_text_message
 from litellm import completion
 
+# Make repo src importable
+REPO_ROOT = Path(__file__).resolve().parents[3]
+SRC_ROOT = REPO_ROOT / "src"
+sys.path.insert(0, str(SRC_ROOT))
+
 dotenv.load_dotenv()
+
+# Import NaturalLanguageAgent and related data structures
+from white_agent import NaturalLanguageAgent, NaturalLanguageRequest, Location
 
 
 def load_agent_card(agent_name: str, public_url: str) -> AgentCard:
@@ -33,6 +43,8 @@ def load_agent_card(agent_name: str, public_url: str) -> AgentCard:
 class SampleWhiteExecutor(AgentExecutor):
     def __init__(self):
         self.ctx_history = {}
+        # Initialize NaturalLanguageAgent for parsing
+        self.nl_agent = NaturalLanguageAgent(agent_name="NaturalLanguageAgent (v2)")
 
     def _parse_json_from_input(self, text: str):
         start = text.find("<json>")
@@ -56,15 +68,33 @@ class SampleWhiteExecutor(AgentExecutor):
         # If JSON payload provided, act as routing agent
         if payload and isinstance(payload, dict) and "fleet" in payload:
             fleet = payload.get("fleet") or []
-            gt = payload.get("ground_truth") or {}
             req_id = payload.get("request_id", "")
-            # Use ground truth origin/dest if available
-            origin = gt.get("origin", {}) if isinstance(gt, dict) else {}
-            dest = gt.get("destination", {}) if isinstance(gt, dict) else {}
-            o_lat = origin.get("latitude", 40.75)
-            o_lon = origin.get("longitude", -73.98)
-            d_lat = dest.get("latitude", 40.75)
-            d_lon = dest.get("longitude", -73.98)
+            request_text = payload.get("request_text", "")
+
+            # Create NaturalLanguageRequest object
+            nl_request = NaturalLanguageRequest(
+                request_id=req_id,
+                request_time=datetime.now(),
+                natural_language_text=request_text
+            )
+
+            # Use NaturalLanguageAgent to parse the request
+            try:
+                # NaturalLanguageAgent.parse_request expects a VehicleDatabase, but we don't have one
+                # So we'll call the internal parsing methods directly
+                parsed = self.nl_agent.parse_request(nl_request, vehicle_database=None)
+
+                o_lat = parsed.origin.latitude
+                o_lon = parsed.origin.longitude
+                d_lat = parsed.destination.latitude
+                d_lon = parsed.destination.longitude
+
+            except Exception as e:
+                # If parsing fails, use fallback coordinates
+                print(f"NaturalLanguageAgent parsing failed: {e}")
+                o_lat, o_lon = 40.75, -73.98
+                d_lat, d_lon = 40.75, -73.98
+                parsed = None
 
             # pick nearest idle/available vehicle
             best_id = None
@@ -84,19 +114,21 @@ class SampleWhiteExecutor(AgentExecutor):
             # rough miles
             deadhead_miles = best_dist * 69.0 if best_id else 1.0
             trip_dist = self._dist(o_lat, o_lon, d_lat, d_lon) * 69.0
+
+            # Build response from parsed data
             resp = {
                 "parsed": {
-                    "pickup_zone_id": origin.get("zone_id"),
-                    "dropoff_zone_id": dest.get("zone_id"),
-                    "pickup_zone": origin.get("zone_name"),
-                    "dropoff_zone": dest.get("zone_name"),
+                    "pickup_zone_id": parsed.origin.zone_id if parsed else None,
+                    "dropoff_zone_id": parsed.destination.zone_id if parsed else None,
+                    "pickup_zone": parsed.origin.zone_name if parsed else None,
+                    "dropoff_zone": parsed.destination.zone_name if parsed else None,
                     "pickup_latitude": o_lat,
                     "pickup_longitude": o_lon,
                     "dropoff_latitude": d_lat,
                     "dropoff_longitude": d_lon,
-                    "passenger_count": origin.get("passenger_count", 1),
-                    "wheelchair_accessible": origin.get("wheelchair_accessible", False),
-                    "shared_ride_ok": origin.get("shared_ride_ok", True),
+                    "passenger_count": parsed.passenger_count if parsed else 1,
+                    "wheelchair_accessible": parsed.wheelchair_accessible if parsed else False,
+                    "shared_ride_ok": parsed.shared_ride_ok if parsed else True,
                 },
                 "routing": {
                     "vehicle_id": best_id,

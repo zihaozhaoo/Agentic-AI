@@ -119,13 +119,22 @@ class RideGreenExecutor(AgentExecutor):
             augment_location=True,
         )
 
-        # Select agent: if remote URL provided, use DummyWhiteAgent to force perfect parsing (cheat).
+        # Select agent: if remote URL provided, use RemoteWhiteAgent.
         # Otherwise use chosen baseline locally.
         if remote_white_url:
-            white_agent = DummyWhiteAgent(agent_name="DummyAgent (cheat)")
+            # Load zone lookup for RemoteWhiteAgent
+            import pandas as pd
+            zone_lookup_df = pd.read_csv(taxi_zone_lookup)
+
+            white_agent = RemoteWhiteAgent(
+                remote_url=remote_white_url,
+                zone_lookup_df=zone_lookup_df,
+                agent_name="RemoteWhiteAgent (v2)",
+                logger=logger
+            )
             await event_queue.enqueue_event(
                 new_agent_text_message(
-                    f"Using dummy white agent (cheating with ground truth); remote URL {remote_white_url} ignored.",
+                    f"Using remote white agent at {remote_white_url}",
                     context_id=context.context_id,
                 )
             )
