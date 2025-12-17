@@ -7,7 +7,7 @@ to participate in the Green Agent evaluation.
 
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import os
 import math
@@ -252,8 +252,9 @@ class DummyWhiteAgent(WhiteAgentBase):
             return StructuredRequest(
                 request_id=nl_request.request_id,
                 request_time=nl_request.request_time,
-                origin=Location(latitude=0.0, longitude=0.0),
-                destination=Location(latitude=0.0, longitude=0.0),
+                origin=Location(latitude=40.7580, longitude=-73.9855),
+                destination=Location(latitude=40.7580, longitude=-73.9855),
+                customer_id=nl_request.customer_id,
             )
 
     def make_routing_decision(
@@ -461,9 +462,58 @@ class NaturalLanguageAgent(WhiteAgentBase):
             for loc in profile.frequent_locations:
                 context_parts.append(f"  * {loc.label}: {loc.zone_name}, {loc.borough} (Zone ID: {loc.zone_id})")
 
-        context_parts.append("\nWhen the user mentions personal locations like 'home', 'my house', 'work', 'office', etc., use the addresses from this profile.")
+        context_parts.append("\nWhen the user mentions personal locations like 'home', 'my house', 'work', 'office', etc., resolve them to the zone name and borough from this profile.")
 
         return "\n".join(context_parts)
+
+    def _looks_personal_reference(self, label: str) -> bool:
+        label_lower = label.lower()
+        personal_tokens = [
+            "home",
+            "house",
+            "place",
+            "work",
+            "office",
+            "gym",
+            "parents",
+            "mother",
+            "father",
+            "sister",
+            "brother",
+            "friend",
+        ]
+        return any(token in label_lower for token in personal_tokens)
+
+    def _apply_personal_location_fallback(
+        self,
+        loc_data: LocationExtraction,
+        nl_text: str,
+        customer_id: Optional[str]
+    ) -> None:
+        if not customer_id or not self.customer_db:
+            return
+
+        if loc_data.address or loc_data.poi_name:
+            return
+
+        if loc_data.zone_name_hint and not self._looks_personal_reference(loc_data.zone_name_hint):
+            return
+
+        profile = self.customer_db.get_profile(customer_id)
+        if not profile:
+            return
+
+        candidates = []
+        if loc_data.zone_name_hint:
+            candidates.append(loc_data.zone_name_hint)
+        if nl_text:
+            candidates.append(nl_text)
+
+        for text in candidates:
+            personal = profile.get_personal_poi_by_label(text)
+            if personal:
+                loc_data.zone_name_hint = f"{personal.zone_name}, {personal.borough}"
+                return
 
     def _geocode_location(self, loc_data: LocationExtraction) -> Tuple[float, float]:
         """
@@ -477,8 +527,8 @@ class NaturalLanguageAgent(WhiteAgentBase):
         search_query = loc_data.address or loc_data.poi_name or loc_data.zone_name_hint
 
         if not search_query:
-            print("Warning: No address/POI info to geocode. Returning 0.0")
-            return 0.0, 0.0
+            print("Warning: No address/POI info to geocode. Falling back to Midtown Manhattan.")
+            return 40.7580, -73.9855
 
         # Always add NYC context to ensure Google Maps searches in New York City
         search_query += ", New York, NY"
@@ -508,13 +558,20 @@ class NaturalLanguageAgent(WhiteAgentBase):
         # Get customer context if available
         customer_context = self._get_customer_context(nl_request.customer_id)
 
-        system_prompt = (
-            f"You are a ride-hailing dispatcher in NYC. Current time: {current_time_str}. "
-            "Extract the pickup and dropoff addresses or POI names for locations in New York City. "
-            "All locations should be assumed to be in NYC unless explicitly stated otherwise. "
-            "Resolve relative times (e.g. 'in 10 mins') to absolute ISO timestamps."
-            f"{customer_context}"
-        )
+        system_prompt = "\n".join([
+            f"You are a ride-hailing dispatcher in NYC. Current time: {current_time_str}.",
+            "Extract exactly one pickup and one dropoff location from the user's request.",
+            "Rules:",
+            "- Always fill both pickup and dropoff.",
+            "- If the request uses 'to X from Y', pickup is Y and dropoff is X.",
+            "- If multiple stops are mentioned, ignore intermediate stops and use the final destination as dropoff.",
+            "- Prefer addresses; use zone/neighborhood names with borough context when available; use POIs only when no address/zone is given.",
+            "- If a personal reference is mentioned (home/work/office/my place), resolve it using the customer profile and output the profile's zone name + borough.",
+            "- Do not invent locations beyond the request or customer profile.",
+            "- Assume NYC unless explicitly stated otherwise.",
+            "- Resolve relative times (e.g. 'in 10 mins') to absolute ISO timestamps.",
+            customer_context,
+        ]).strip()
 
         # 1. Extract Text Data via OpenAI (Let it raise if API fails)
         completion = self.openai_client.beta.chat.completions.parse(
@@ -531,6 +588,9 @@ class NaturalLanguageAgent(WhiteAgentBase):
              raise RuntimeError(f"OpenAI failed to parse structure. Response: {completion}")
              
         extracted = completion.choices[0].message.parsed
+
+        self._apply_personal_location_fallback(extracted.pickup, nl_text, nl_request.customer_id)
+        self._apply_personal_location_fallback(extracted.dropoff, nl_text, nl_request.customer_id)
 
         # 2. Geocode (Get Lat/Lon) - Will raise ValueError if address invalid
         p_lat, p_lon = self._geocode_location(extracted.pickup)
@@ -590,52 +650,37 @@ class NaturalLanguageAgent(WhiteAgentBase):
         """
         Assigns the nearest available vehicle to the geocoded origin.
         """
-        origin_lat = structured_request.origin.latitude
-        origin_lon = structured_request.origin.longitude
-
-        all_vehicles = vehicle_database.get_all_vehicles()
-        candidates = [v for v in all_vehicles if v.status in ['idle', 'available']]
-        if not candidates:
-            # Logic decision: do we raise or fallback? 
-            # If strictly strict, we might raise. Here we default to all vehicles as fallback.
-            candidates = all_vehicles
-
-        best_vehicle = None
-        min_distance = float('inf')
-
-        for vehicle in candidates:
-            v_lat = vehicle.current_location.latitude
-            v_lon = vehicle.current_location.longitude
-            
-            # Simple Euclidean approx
-            lat_diff = (v_lat - origin_lat) * 69.0
-            lon_diff = (v_lon - origin_lon) * 53.0
-            dist_miles = math.sqrt(lat_diff**2 + lon_diff**2)
-            
-            if dist_miles < min_distance:
-                min_distance = dist_miles
-                best_vehicle = vehicle
-
-        if not best_vehicle:
-            # If database is empty, raise
-            raise ValueError("No vehicles found in database.")
-
-        # Trip Distance
-        dest_lat = structured_request.destination.latitude
-        dest_lon = structured_request.destination.longitude
-        trip_dist_miles = math.sqrt(
-            ((dest_lat - origin_lat) * 69.0)**2 + 
-            ((dest_lon - origin_lon) * 53.0)**2
+        available_vehicles = vehicle_database.get_available_vehicles(
+            location=structured_request.origin,
+            max_count=25,
+            wheelchair_required=structured_request.wheelchair_accessible,
         )
+        if not available_vehicles:
+            raise ValueError("No available vehicles found for routing decision.")
+
+        best_vehicle = available_vehicles[0]
+
+        pickup_dist_miles, pickup_minutes = self.query_distance_and_time(
+            best_vehicle.current_location, structured_request.origin
+        )
+        trip_dist_miles, trip_minutes = self.query_distance_and_time(
+            structured_request.origin, structured_request.destination
+        )
+
+        est_pickup_time = structured_request.request_time + timedelta(minutes=pickup_minutes)
+        est_dropoff_time = est_pickup_time + timedelta(minutes=trip_minutes)
 
         return RoutingDecision(
             request_id=structured_request.request_id,
             vehicle_id=best_vehicle.vehicle_id,
-            estimated_pickup_time=structured_request.request_time,
-            estimated_dropoff_time=structured_request.request_time,
-            estimated_pickup_distance_miles=min_distance,
+            estimated_pickup_time=est_pickup_time,
+            estimated_dropoff_time=est_dropoff_time,
+            estimated_pickup_distance_miles=pickup_dist_miles,
             estimated_trip_distance_miles=trip_dist_miles,
-            decision_rationale=f"NaturalLanguageAgent: Assigned vehicle {best_vehicle.vehicle_id} in {structured_request.origin.zone_name} ({min_distance:.2f} mi)"
+            decision_rationale=(
+                f"NaturalLanguageAgent: Assigned vehicle {best_vehicle.vehicle_id} "
+                f"in {structured_request.origin.zone_name} ({pickup_dist_miles:.2f} mi)"
+            ),
         )
 
     def query_distance_and_time(self, origin: Location, destination: Location) -> tuple[float, float]:

@@ -859,8 +859,8 @@ class GreenAgentEnvironment:
                 nl_request.ground_truth.destination.longitude
             )
 
-        # Parse OK if both distance errors are < 100 miles (matches evaluator logic)
-        parse_ok = (origin_distance_error < 100 and destination_distance_error < 100)
+        # Parse OK if both distance errors are < 1 mile (align with evaluator scoring)
+        parse_ok = (origin_distance_error < 1 and destination_distance_error < 1)
         per_request_score = (1.0 if parse_ok else 0.0) * trip_share
         self.logger.log_event(
             'REQUEST_SCORE',

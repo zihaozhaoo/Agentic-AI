@@ -10,6 +10,7 @@ This module generates natural language ride requests using template tiers:
 """
 
 import random
+import math
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 
@@ -109,7 +110,8 @@ class TemplateGenerator:
         zone_name: str,
         poi_name: Optional[str] = None,
         personal_label: Optional[str] = None,
-        address: Optional[str] = None
+        address: Optional[str] = None,
+        borough: Optional[str] = None
     ) -> str:
         """
         Get a natural language reference to a location.
@@ -119,32 +121,70 @@ class TemplateGenerator:
             poi_name: Optional POI name
             personal_label: Optional personal location label (e.g., "home", "work")
             address: Optional street address
+            borough: Optional borough name for disambiguation
 
         Returns:
             Natural language location reference
         """
-        # Priority: personal > address > POI > zone
-        # NOTE: Address prioritized over POI because augmented addresses are more accurate
-        # than zone-level POIs (which may not match the actual sampled location)
+        # Priority: address > personal+zone > zone > POI > personal
+        # NOTE: Address prioritized to keep parsed locations close to ground truth.
 
-        if personal_label and random.random() < 0.7:
-            # Use personal reference
-            if 'home' in personal_label.lower():
-                return random.choice(["home", "my place", "my house", "my apartment"])
-            elif 'work' in personal_label.lower() or 'office' in personal_label.lower():
-                return random.choice(["work", "my office", "the office"])
-            else:
-                return random.choice([personal_label, f"my {personal_label}"])
-
-        # Use address if available (more accurate than zone-level POIs)
-        if address and random.random() < 0.7:
+        if address:
             return address
 
-        # Use POI only if no address available
-        if poi_name and random.random() < 0.8:
+        def _normalize_text(value: Optional[Any]) -> str:
+            if value is None:
+                return ""
+            if isinstance(value, float) and math.isnan(value):
+                return ""
+            if isinstance(value, str):
+                return value
+            return str(value)
+
+        zone_value = _normalize_text(zone_name).strip()
+        borough_value = _normalize_text(borough).strip()
+
+        def _is_usable(value: str) -> bool:
+            if not value:
+                return False
+            lowered = value.lower()
+            return lowered not in {"unknown", "nan"}
+
+        if personal_label and _is_usable(zone_value):
+            personal_label_lower = personal_label.lower()
+            if 'home' in personal_label_lower:
+                personal_ref = random.choice(["home", "my house", "my apartment"])
+            elif 'work' in personal_label_lower or 'office' in personal_label_lower:
+                personal_ref = random.choice(["work", "my office"])
+            else:
+                personal_ref = random.choice([personal_label, f"my {personal_label}"])
+
+            if _is_usable(borough_value):
+                return f"{personal_ref} in {zone_value}, {borough_value}"
+            return f"{personal_ref} in {zone_value}"
+
+        if _is_usable(zone_value):
+            if _is_usable(borough_value):
+                return f"{zone_value}, {borough_value}"
+            return zone_value
+
+        if poi_name:
             return poi_name
 
-        return zone_name
+        if personal_label:
+            personal_label_lower = personal_label.lower()
+            if 'home' in personal_label_lower:
+                personal_ref = random.choice(["home", "my house", "my apartment"])
+            elif 'work' in personal_label_lower or 'office' in personal_label_lower:
+                personal_ref = random.choice(["work", "my office"])
+            else:
+                personal_ref = random.choice([personal_label, f"my {personal_label}"])
+
+            if _is_usable(borough_value):
+                return f"{personal_ref} in {borough_value}"
+            return personal_ref
+
+        return "Unknown"
 
     def generate_basic(self, trip_data: Dict[str, Any]) -> str:
         """
@@ -166,14 +206,16 @@ class TemplateGenerator:
             trip_data['pickup_zone'],
             trip_data.get('pickup_poi'),
             trip_data.get('pickup_personal'),
-            trip_data.get('pickup_address')
+            trip_data.get('pickup_address'),
+            trip_data.get('pickup_borough')
         )
 
         destination = self._get_location_reference(
             trip_data['dropoff_zone'],
             trip_data.get('dropoff_poi'),
             trip_data.get('dropoff_personal'),
-            trip_data.get('dropoff_address')
+            trip_data.get('dropoff_address'),
+            trip_data.get('dropoff_borough')
         )
 
         # Use requested_pickup_time if available and valid
@@ -228,14 +270,16 @@ class TemplateGenerator:
             trip_data['pickup_zone'],
             trip_data.get('pickup_poi'),
             trip_data.get('pickup_personal'),
-            trip_data.get('pickup_address')
+            trip_data.get('pickup_address'),
+            trip_data.get('pickup_borough')
         )
 
         destination = self._get_location_reference(
             trip_data['dropoff_zone'],
             trip_data.get('dropoff_poi'),
             trip_data.get('dropoff_personal'),
-            trip_data.get('dropoff_address')
+            trip_data.get('dropoff_address'),
+            trip_data.get('dropoff_borough')
         )
 
         templates = [
@@ -263,14 +307,16 @@ class TemplateGenerator:
             trip_data['pickup_zone'],
             trip_data.get('pickup_poi'),
             trip_data.get('pickup_personal'),
-            trip_data.get('pickup_address')
+            trip_data.get('pickup_address'),
+            trip_data.get('pickup_borough')
         )
 
         destination = self._get_location_reference(
             trip_data['dropoff_zone'],
             trip_data.get('dropoff_poi'),
             trip_data.get('dropoff_personal'),
-            trip_data.get('dropoff_address')
+            trip_data.get('dropoff_address'),
+            trip_data.get('dropoff_borough')
         )
 
         # Use requested_dropoff_time if available and valid
@@ -327,11 +373,9 @@ class TemplateGenerator:
             urgency_prefix = random.choice(urgency_options)
 
         templates = [
-            f"{urgency_prefix}I need to arrive at {destination} by {arrival_str}{time_window_str} {reason}".strip(),
-            f"{urgency_prefix}I need to be at {destination} by {arrival_str}{time_window_str} {reason}".strip(),
             f"Pick me up from {origin}, {urgency_prefix.lower()}I have to be at {destination} by {arrival_str}{time_window_str} {reason}".strip(),
             f"I need a ride from {origin} to {destination}, must arrive by {arrival_str}{time_window_str} {reason}".strip(),
-            f"Can you get me to {destination} by {arrival_str}{time_window_str}? Picking up from {origin}. {reason.capitalize() if reason else ''}".strip()
+            f"Can you get me to {destination} by {arrival_str}{time_window_str}? Picking up from {origin}. {reason.capitalize() if reason else ''}".strip(),
         ]
 
         return random.choice(templates)
@@ -351,14 +395,16 @@ class TemplateGenerator:
             trip_data['pickup_zone'],
             trip_data.get('pickup_poi'),
             trip_data.get('pickup_personal'),
-            trip_data.get('pickup_address')
+            trip_data.get('pickup_address'),
+            trip_data.get('pickup_borough')
         )
 
         destination = self._get_location_reference(
             trip_data['dropoff_zone'],
             trip_data.get('dropoff_poi'),
             trip_data.get('dropoff_personal'),
-            trip_data.get('dropoff_address')
+            trip_data.get('dropoff_address'),
+            trip_data.get('dropoff_borough')
         )
 
         # Generate a random intermediate stop (use borough or nearby zone)
@@ -401,14 +447,16 @@ class TemplateGenerator:
             trip_data['pickup_zone'],
             trip_data.get('pickup_poi'),
             trip_data.get('pickup_personal'),
-            trip_data.get('pickup_address')
+            trip_data.get('pickup_address'),
+            trip_data.get('pickup_borough')
         )
 
         destination = self._get_location_reference(
             trip_data['dropoff_zone'],
             trip_data.get('dropoff_poi'),
             trip_data.get('dropoff_personal'),
-            trip_data.get('dropoff_address')
+            trip_data.get('dropoff_address'),
+            trip_data.get('dropoff_borough')
         )
 
         # Collect complex requirements

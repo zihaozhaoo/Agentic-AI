@@ -98,8 +98,13 @@ class RandomBaselineAgent(WhiteAgentBase):
     - Assigns random available vehicles
     """
     
-    def __init__(self, agent_name: str = "RandomBaseline", config: Optional[Dict[str, Any]] = None):
-        super().__init__(agent_name, config)
+    def __init__(
+        self,
+        agent_name: str = "RandomBaseline",
+        config: Optional[Dict[str, Any]] = None,
+        customer_db: Optional[Any] = None,
+    ):
+        super().__init__(agent_name, config, customer_db)
         self.zone_table = _load_zone_table()
         
     def parse_request(
@@ -174,8 +179,13 @@ class NearestVehicleBaselineAgent(WhiteAgentBase):
     plausible NYC locations. This keeps deadhead miles low without extra logic.
     """
 
-    def __init__(self, agent_name: str = "NearestVehicleBaseline", config: Optional[Dict[str, Any]] = None):
-        super().__init__(agent_name, config)
+    def __init__(
+        self,
+        agent_name: str = "NearestVehicleBaseline",
+        config: Optional[Dict[str, Any]] = None,
+        customer_db: Optional[Any] = None,
+    ):
+        super().__init__(agent_name, config, customer_db)
         self.zone_table = _load_zone_table()
 
     def parse_request(
@@ -267,8 +277,13 @@ class RegexBaselineAgent(WhiteAgentBase):
     - Zone names based on a loaded dictionary of NYC taxi zones
     """
     
-    def __init__(self, agent_name: str = "RegexBaseline", config: Optional[Dict[str, Any]] = None):
-        super().__init__(agent_name, config)
+    def __init__(
+        self,
+        agent_name: str = "RegexBaseline",
+        config: Optional[Dict[str, Any]] = None,
+        customer_db: Optional[Any] = None,
+    ):
+        super().__init__(agent_name, config, customer_db)
         self.zone_table = _load_zone_table()
         self.zone_lookup = {
             row['Zone']: int(row['LocationID']) for row in self.zone_table
@@ -301,6 +316,40 @@ class RegexBaselineAgent(WhiteAgentBase):
         # Fallback to a random location to avoid collapsed trajectories
         return _sample_location(self.zone_table)
 
+    def _build_location_for_personal(self, personal_poi) -> Location:
+        """Create a Location from a personal POI (home/work/frequent)."""
+        zone_id = getattr(personal_poi, "zone_id", None)
+        zone_name = getattr(personal_poi, "zone_name", None)
+        zone_row = self._get_zone_row(zone_id) if zone_id is not None else None
+        lat, lon = _zone_center_with_jitter(zone_row)
+        return Location(
+            latitude=lat,
+            longitude=lon,
+            zone_name=zone_name,
+            zone_id=zone_id,
+            address=getattr(personal_poi, "address", None),
+            poi_name=getattr(personal_poi, "label", None),
+        )
+
+    def _resolve_personal_location(self, text: str, profile) -> Optional[Location]:
+        """Resolve 'home/work/etc.' references using the customer profile."""
+        if not profile or not text:
+            return None
+
+        home_keys = ("home", "house", "apartment", "place")
+        work_keys = ("work", "office")
+        if any(k in text for k in home_keys):
+            return self._build_location_for_personal(profile.home)
+        if any(k in text for k in work_keys) and getattr(profile, "work", None):
+            return self._build_location_for_personal(profile.work)
+
+        for loc in getattr(profile, "frequent_locations", []) or []:
+            label = getattr(loc, "label", "")
+            if label and self._normalize(label) in text:
+                return self._build_location_for_personal(loc)
+
+        return None
+
     def _normalize(self, text: str) -> str:
         """Normalize text by replacing punctuation with spaces and lowercasing."""
         # Replace punctuation with space
@@ -319,6 +368,13 @@ class RegexBaselineAgent(WhiteAgentBase):
         
         origin_zone = None
         dest_zone = None
+        origin_loc = None
+        dest_loc = None
+
+        # Resolve personal locations if we have a customer profile.
+        profile = None
+        if self.customer_db and nl_request.customer_id:
+            profile = self.customer_db.get_profile(nl_request.customer_id)
         
         # Simple heuristic: "from [Zone]" and "to [Zone]"
         # We search for the longest matching zone name to avoid partial matches
@@ -356,6 +412,9 @@ class RegexBaselineAgent(WhiteAgentBase):
                 else:
                     to_part = normalized_text[to_idx:from_idx]
                     from_part = normalized_text[from_idx:]
+
+                origin_loc = self._resolve_personal_location(from_part, profile)
+                dest_loc = self._resolve_personal_location(to_part, profile)
                     
                 for zone in found_zones:
                     normalized_zone = self._normalize(zone)
@@ -369,10 +428,14 @@ class RegexBaselineAgent(WhiteAgentBase):
                     origin_zone = found_zones[0]
                 if len(found_zones) >= 2:
                     dest_zone = found_zones[1]
+
+                if origin_loc is None and dest_loc is None:
+                    origin_loc = self._resolve_personal_location(normalized_text, profile)
+                    dest_loc = self._resolve_personal_location(normalized_text, profile)
         
         # Create locations
-        origin_loc = self._build_location_for_zone(origin_zone)
-        dest_loc = self._build_location_for_zone(dest_zone)
+        origin_loc = origin_loc or self._build_location_for_zone(origin_zone)
+        dest_loc = dest_loc or self._build_location_for_zone(dest_zone)
 
         # If we failed to find distinct zones, sample a different dropoff to keep maps informative
         if dest_loc.zone_id == origin_loc.zone_id and len(self.zone_table) > 1:
@@ -385,7 +448,8 @@ class RegexBaselineAgent(WhiteAgentBase):
             request_time=nl_request.request_time,
             origin=origin_loc,
             destination=dest_loc,
-            passenger_count=1 # Default
+            passenger_count=1,  # Default
+            customer_id=nl_request.customer_id,
         )
 
     def make_routing_decision(

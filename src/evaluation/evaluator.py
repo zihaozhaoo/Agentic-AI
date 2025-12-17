@@ -19,6 +19,8 @@ from white_agent.data_structures import (
 )
 from vehicle_system import VehicleSimulator, VehicleDatabase
 
+PARSING_DISTANCE_THRESHOLD_MILES = 1.0
+
 
 @dataclass
 class ParsingMetrics:
@@ -35,12 +37,12 @@ class ParsingMetrics:
 
     @property
     def origin_zone_accuracy(self) -> float:
-        """Origin zone identification accuracy."""
+        """Origin accuracy (distance within threshold)."""
         return self.correct_origin_zone / self.total_requests if self.total_requests > 0 else 0.0
 
     @property
     def destination_zone_accuracy(self) -> float:
-        """Destination zone identification accuracy."""
+        """Destination accuracy (distance within threshold)."""
         return self.correct_destination_zone / self.total_requests if self.total_requests > 0 else 0.0
 
     @property
@@ -187,19 +189,6 @@ class Evaluator:
 
         ground_truth = nl_request.ground_truth
 
-        # Evaluate zone identification
-        origin_zone_correct = (
-            parsed_request.origin.zone_id == ground_truth.origin.zone_id
-            if parsed_request.origin.zone_id and ground_truth.origin.zone_id
-            else False
-        )
-
-        destination_zone_correct = (
-            parsed_request.destination.zone_id == ground_truth.destination.zone_id
-            if parsed_request.destination.zone_id and ground_truth.destination.zone_id
-            else False
-        )
-
         # Calculate location distance errors
         origin_error = self._calculate_distance(
             parsed_request.origin.latitude,
@@ -214,6 +203,10 @@ class Evaluator:
             ground_truth.destination.latitude,
             ground_truth.destination.longitude
         )
+
+        # Treat parsing accuracy as distance-within-threshold to align with scoring.
+        origin_zone_correct = origin_error < PARSING_DISTANCE_THRESHOLD_MILES
+        destination_zone_correct = destination_error < PARSING_DISTANCE_THRESHOLD_MILES
 
         # Evaluate time constraints
         time_constraint_correct = (
@@ -330,9 +323,11 @@ class Evaluator:
         })
 
         # Custom per-request score: parse correctness * trip_share_of_total_miles
-        # Modified: parse_ok based on coordinate distance < 1 mile for both origin and destination
-        parse_ok = (parsing_eval.get('origin_distance_error_miles', float('inf')) < 1 and
-                    parsing_eval.get('destination_distance_error_miles', float('inf')) < 1)
+        # parse_ok is based on coordinate distance within PARSING_DISTANCE_THRESHOLD_MILES
+        parse_ok = (
+            parsing_eval.get('origin_distance_error_miles', float('inf')) < PARSING_DISTANCE_THRESHOLD_MILES
+            and parsing_eval.get('destination_distance_error_miles', float('inf')) < PARSING_DISTANCE_THRESHOLD_MILES
+        )
         trip_miles = (trip_result or {}).get('trip_distance', 0.0)
         deadhead_miles = (trip_result or {}).get('deadhead_miles', 0.0)
         denom = trip_miles + deadhead_miles

@@ -57,17 +57,14 @@ class LLMGenerator:
 Given structured trip information, generate a natural, conversational request a real person would make.
 
 Requirements:
-- Be natural and conversational
-- Vary the phrasing and style
-- Include relevant details when appropriate
-- Sometimes use informal language
-- Sometimes be more formal or business-like
-- Include reasons for trips occasionally
-- Use different ways to refer to locations (address, landmark, neighborhood, personal reference)
-- When multiple location options are provided, prefer the most accurate one (addresses > POIs > zones)
-- IMPORTANT: ALWAYS clearly specify BOTH the pickup location AND the destination in the request
-- Make sure both origin and destination are unambiguous and specific
-- When using zone names or neighborhoods, include "NYC" or borough context to clarify this is in New York City
+- Be natural and conversational; vary phrasing and style
+- Include relevant details when appropriate (time windows, arrival constraints)
+- Generate exactly ONE pickup and ONE destination; no intermediate stops or multi-leg itineraries
+- Always state both pickup and destination explicitly, using clear "from X to Y" phrasing
+- Use only the provided locations; do NOT invent new places or anything outside NYC
+- Prefer the most accurate location option (addresses > zones/neighborhoods > POIs)
+- If you use a personal reference (home/work/office/my place), include the zone or borough too
+- When using zone or neighborhood names, include NYC/borough context to disambiguate
 - Keep it realistic to what someone would actually say
 
 Generate ONLY the request text, nothing else."""
@@ -93,28 +90,30 @@ Generate ONLY the request text, nothing else."""
         parts = []
 
         # Origin
-        # NOTE: Prioritize address/personal over POI when available
-        # POIs are zone-level and may not match actual augmented location
+        # NOTE: Prefer addresses, then zones/neighborhoods, then POIs.
+        # POIs can drift from the ground-truth zone.
         origin_parts = []
         if trip_data.get('pickup_personal'):
-            origin_parts.append(f"Personal location: {trip_data['pickup_personal']}")
+            origin_parts.append(f"Personal location: {trip_data['pickup_personal']} (use with zone/borough)")
         if trip_data.get('pickup_address'):
             origin_parts.append(f"Address: {trip_data['pickup_address']} (MOST ACCURATE)")
         elif trip_data.get('pickup_poi'):
             origin_parts.append(f"POI: {trip_data['pickup_poi']}")
-        origin_parts.append(f"Zone: {trip_data['pickup_zone']}")
+        pickup_borough = trip_data.get('pickup_borough', 'Unknown')
+        origin_parts.append(f"Zone: {trip_data['pickup_zone']} ({pickup_borough})")
 
         parts.append(f"Origin: {', '.join(origin_parts)}")
 
         # Destination
         dest_parts = []
         if trip_data.get('dropoff_personal'):
-            dest_parts.append(f"Personal location: {trip_data['dropoff_personal']}")
+            dest_parts.append(f"Personal location: {trip_data['dropoff_personal']} (use with zone/borough)")
         if trip_data.get('dropoff_address'):
             dest_parts.append(f"Address: {trip_data['dropoff_address']} (MOST ACCURATE)")
         elif trip_data.get('dropoff_poi'):
             dest_parts.append(f"POI: {trip_data['dropoff_poi']}")
-        dest_parts.append(f"Zone: {trip_data['dropoff_zone']}")
+        dropoff_borough = trip_data.get('dropoff_borough', 'Unknown')
+        dest_parts.append(f"Zone: {trip_data['dropoff_zone']} ({dropoff_borough})")
 
         parts.append(f"Destination: {', '.join(dest_parts)}")
 
