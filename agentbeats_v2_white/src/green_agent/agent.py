@@ -74,8 +74,8 @@ class RideGreenExecutor(AgentExecutor):
             return user_input[start + len(tag) + 2 : end].strip()
 
         agent_name = extract("agent_name") or "nearest"
-        num_requests = int(extract("num_requests") or 500)
-        num_vehicles = int(extract("num_vehicles") or 100)
+        num_requests = int(extract("num_requests") or 200)  # Reduced from 500 for testing
+        num_vehicles = int(extract("num_vehicles") or 80)  # Reduced from 100 for testing
         remote_white_url = extract("white_agent_url") or None
 
         await event_queue.enqueue_event(
