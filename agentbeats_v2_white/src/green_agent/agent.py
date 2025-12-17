@@ -34,7 +34,6 @@ from white_agent import (  # noqa: E402
     RegexBaselineAgent,
     RandomBaselineAgent,
     NearestVehicleBaselineAgent,
-    RemoteWhiteAgent,
     NaturalLanguageAgent
 )
 
@@ -74,14 +73,18 @@ class RideGreenExecutor(AgentExecutor):
             return user_input[start + len(tag) + 2 : end].strip()
 
         agent_name = extract("agent_name") or "nearest"
-        num_requests = int(extract("num_requests") or 200)  # Reduced from 500 for testing
-        num_vehicles = int(extract("num_vehicles") or 80)  # Reduced from 100 for testing
+        num_requests = int(extract("num_requests") or 200)  # Default 150 requests
+        num_vehicles = int(extract("num_vehicles") or 80)  # Default 60 vehicles
         remote_white_url = extract("white_agent_url") or None
 
+        # Send detailed configuration info
         await event_queue.enqueue_event(
             new_agent_text_message(
-                f"Starting evaluation with agent={agent_name}, "
-                f"requests={num_requests}, vehicles={num_vehicles}",
+                f"🚀 Starting evaluation\n"
+                f"Agent: {agent_name}\n"
+                f"Requests: {num_requests}\n"
+                f"Vehicles: {num_vehicles}\n"
+                f"Remote white agent: {'Yes' if remote_white_url else 'No (local)'}",
                 context_id=context.context_id,
             )
         )
@@ -93,9 +96,10 @@ class RideGreenExecutor(AgentExecutor):
         viz_root = project_root / "logs" / "visualizations"
 
         # Build environment
+        template_ratio = 0.0  # 100% LLM-based generation
         request_simulator = RequestSimulator(
             taxi_zone_lookup_path=str(taxi_zone_lookup),
-            template_ratio=0,
+            template_ratio=template_ratio,
         )
         logger = EventLogger(
             log_file_path=str(project_root / "logs" / "agentbeats_v2.log"),
@@ -104,6 +108,18 @@ class RideGreenExecutor(AgentExecutor):
         environment = GreenAgentEnvironment(
             request_simulator=request_simulator,
             logger=logger,
+        )
+
+        # Send request generation config
+        await event_queue.enqueue_event(
+            new_agent_text_message(
+                f"📋 Request Generation:\n"
+                f"Template ratio: {template_ratio*100:.0f}%\n"
+                f"LLM ratio: {(1-template_ratio)*100:.0f}%\n"
+                f"Location augmentation: Enabled\n"
+                f"Generating {num_requests} requests...",
+                context_id=context.context_id,
+            )
         )
 
         # Fleet
@@ -118,6 +134,15 @@ class RideGreenExecutor(AgentExecutor):
             parquet_path=str(parquet_file),
             n_requests=num_requests,
             augment_location=True,
+        )
+
+        await event_queue.enqueue_event(
+            new_agent_text_message(
+                f"✅ Generated {len(requests)} requests\n"
+                f"🚗 Initialized {num_vehicles} vehicles\n"
+                f"Starting evaluation...",
+                context_id=context.context_id,
+            )
         )
 
         # Select agent: if remote URL provided, use DummyWhiteAgent to force perfect parsing (cheat).
@@ -136,35 +161,107 @@ class RideGreenExecutor(AgentExecutor):
         else:
             white_agent = pick_agent(agent_name, customer_db=request_simulator.customer_db)
 
-        timestamp = Path().cwd().name  # keep unique-ish identifier
         agent_slug = white_agent.agent_name.lower().replace(" ", "_")
         map_output_dir = viz_root / f"{agent_slug}_v2"
+
+        # Adaptive delay based on request count for better performance
+        # Smaller delay for larger batches to avoid timeouts
+        if num_requests <= 50:
+            delay = 0.5 if remote_white_url else 0.0
+        elif num_requests <= 150:
+            delay = 0.2 if remote_white_url else 0.0
+        else:
+            delay = 0.1 if remote_white_url else 0.0
+
+        await event_queue.enqueue_event(
+            new_agent_text_message(
+                f"⚙️ Evaluation Settings:\n"
+                f"Inter-request delay: {delay}s\n"
+                f"Estimated time: ~{(num_requests * delay / 60):.1f} min\n"
+                f"Processing...",
+                context_id=context.context_id,
+            )
+        )
 
         result = environment.run_evaluation(
             white_agent=white_agent,
             requests=requests,
             verbose=False,
             map_output_dir=str(map_output_dir),
-            inter_request_delay_seconds=0.5 if remote_white_url else 0.0,
+            inter_request_delay_seconds=delay,
         )
 
         summary = result["evaluation_summary"]
         routing = summary["routing_metrics"]
         parsing = summary["parsing_metrics"]
 
+        # Build comprehensive result message
         msg = textwrap.dedent(
             f"""
-            ✅ Evaluation finished.
-            Agent: {white_agent.agent_name}
-            Overall score: {summary['overall_score']:.2f}
-            Deadhead ratio: {routing['deadhead_ratio']:.3f}
-            Revenue per mile: ${routing['revenue_per_mile']:.2f}
-            Origin acc: {parsing['origin_zone_accuracy']*100:.1f}%
-            Dest acc: {parsing['destination_zone_accuracy']*100:.1f}%
-            Trajectories: {map_output_dir/'trajectories.json'}
-            Map: {map_output_dir/'trajectories_map.html'}
+            ═══════════════════════════════════════
+            ✅ EVALUATION COMPLETE
+            ═══════════════════════════════════════
+
+            📊 Configuration:
+            • Agent: {white_agent.agent_name}
+            • Requests: {summary['total_requests_evaluated']}
+            • Vehicles: {num_vehicles}
+            • Template ratio: {template_ratio*100:.0f}%
+            • LLM ratio: {(1-template_ratio)*100:.0f}%
+
+            🎯 Overall Performance:
+            • Overall Score: {summary['overall_score']:.2f}
+            • Successful Requests: {summary['successful_requests']}
+            • Failed Requests: {summary['failed_requests']}
+
+            📍 Parsing Accuracy:
+            • Origin Zone Accuracy: {parsing['origin_zone_accuracy']*100:.1f}%
+            • Destination Zone Accuracy: {parsing['destination_zone_accuracy']*100:.1f}%
+            • Time Constraint Accuracy: {parsing['time_constraint_accuracy']*100:.1f}%
+            • Special Requirements Accuracy: {parsing['special_requirements_accuracy']*100:.1f}%
+            • Mean Origin Error: {parsing['mean_origin_error_miles']:.2f} miles
+            • Mean Destination Error: {parsing['mean_destination_error_miles']:.2f} miles
+
+            🚗 Routing Metrics:
+            • Total Revenue: ${routing['total_revenue']:.2f}
+            • Total Idle Cost: ${routing['total_idle_cost']:.2f}
+            • Net Revenue: ${routing['net_revenue']:.2f}
+            • Revenue per Mile: ${routing['revenue_per_mile']:.2f}
+            • Deadhead Ratio: {routing['deadhead_ratio']*100:.1f}%
+            • Total Trip Miles: {routing['total_trip_miles']:.1f}
+            • Total Deadhead Miles: {routing['total_deadhead_miles']:.1f}
+            • Avg Pickup Time: {routing['average_pickup_time_minutes']:.1f} min
+            • Avg Trip Time: {routing['average_trip_time_minutes']:.1f} min
+
+            📁 Output Files:
+            • Trajectories: {map_output_dir/'trajectories.json'}
+            • Map: {map_output_dir/'trajectories_map.html'}
+            • Events: {map_output_dir/'events.json'}
+            ═══════════════════════════════════════
             """
         ).strip()
+
+        # Log to file as well
+        logger.log_event("EVALUATION_COMPLETE", {
+            "agent": white_agent.agent_name,
+            "config": {
+                "num_requests": num_requests,
+                "num_vehicles": num_vehicles,
+                "template_ratio": template_ratio,
+                "llm_ratio": 1 - template_ratio,
+            },
+            "overall_score": summary['overall_score'],
+            "parsing_accuracy": {
+                "origin": parsing['origin_zone_accuracy'],
+                "destination": parsing['destination_zone_accuracy'],
+                "time_constraint": parsing['time_constraint_accuracy'],
+                "special_requirements": parsing['special_requirements_accuracy'],
+            },
+            "routing_metrics": routing,
+            "total_requests": summary['total_requests_evaluated'],
+            "successful_requests": summary['successful_requests'],
+            "failed_requests": summary['failed_requests'],
+        })
 
         await event_queue.enqueue_event(
             new_agent_text_message(msg, context_id=context.context_id)
@@ -214,10 +311,10 @@ def start_green_agent(agent_name="ride_green_agent", host="localhost", port=9101
     app = a2a_app.build()
 
     # Add simple health/status endpoints for external card checkers
-    async def health(request):
+    async def health(_request):
         return JSONResponse({"status": "ok"}, status_code=200)
 
-    async def card_route(request):
+    async def card_route(_request):
         return JSONResponse(card.model_dump(by_alias=True), status_code=200)
 
     for path in ["/", "/status", "/health", "/_next"]:
