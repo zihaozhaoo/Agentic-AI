@@ -103,6 +103,9 @@ ngrok http 8011 --url=white.agentic-ai-taxi-routing.ngrok.com.ngrok.app
 
 Open two new terminal windows to run the agent controllers. **Note**: They must run in separate directories.
 
+- **Green Agent (Evaluator)** code is in `agentbeats_v2/`
+- **White Agent (Subject)** code is in `agentbeats_v2_white/`
+
 **Green Agent Controller (Evaluator)**:
 
 ```bash
@@ -168,8 +171,8 @@ For detailed troubleshooting and advanced testing, see the **[Full Deployment Gu
 │   ├── evaluation/          # Scoring metrics
 │   └── environment/         # Main simulation orchestrator
 ├── examples/                # Usage examples and demos
-├── agentbeats_v2/           # Green Agent Controller (Platform/A2A)
-├── agentbeats_v2_white/     # White Agent Controller (Platform)
+├── agentbeats_v2/           # Green Agent Controller (Evaluator) Code for Platform
+├── agentbeats_v2_white/     # White Agent Controller (Subject) Code for Platform
 ├── docs/                    # Documentation and guides
 └── tests/                   # Unit and integration tests
 ```
