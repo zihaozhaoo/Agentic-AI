@@ -187,34 +187,80 @@ class MyCustomWhiteAgent(WhiteAgentBase):
 
 def main():
     """
-    Demo: Test custom white agent.
+    Demo: Run the custom white agent on a small sample.
     """
-    print("Custom White Agent Example")
+    print("Custom White Agent Execution")
     print("="*80)
 
-    # Create agent
-    agent = MyCustomWhiteAgent(
-        agent_name="MyCustomAgent",
-        config={"strategy": "nearest_vehicle"}
+    # 1. Initialize Simulator
+    from request_simulation import RequestSimulator
+    project_root = Path(__file__).parent.parent
+    taxi_zone_lookup = str(project_root / "taxi_zone_lookup.csv")
+    parquet_file = str(project_root / "fhvhv_tripdata_2025-01.parquet")
+
+    request_simulator = RequestSimulator(
+        taxi_zone_lookup_path=taxi_zone_lookup,
+        template_ratio=1.0
     )
 
-    print(f"✓ Created agent: {agent.agent_name}")
-    print()
+    # 2. Initialize Environment
+    from environment import GreenAgentEnvironment, EventLogger
+    import logging
+    
+    # Create logs directory if it doesn't exist
+    log_dir = project_root / "logs"
+    log_dir.mkdir(exist_ok=True)
+    
+    logger = EventLogger(
+        log_file_path=str(log_dir / "custom_agent.log"),
+        console_level=logging.INFO
+    )
+    
+    environment = GreenAgentEnvironment(
+        request_simulator=request_simulator,
+        logger=logger
+    )
 
-    # You can now use this agent with GreenAgentEnvironment:
-    # from environment import GreenAgentEnvironment
-    # environment.run_evaluation(white_agent=agent, requests=requests)
+    # 3. Initialize Fleet
+    print("Initializing fleet...")
+    environment.initialize_vehicles(
+        num_vehicles=50,
+        sample_parquet_path=parquet_file,
+        sample_size=500
+    )
 
-    print("To use this agent in evaluation:")
-    print("  1. Replace demo_evaluation.py line:")
-    print("       white_agent = DummyWhiteAgent()")
-    print("     with:")
-    print("       white_agent = MyCustomWhiteAgent()")
-    print()
-    print("  2. Run evaluation:")
-    print("       python examples/demo_evaluation.py")
-    print()
+    # 4. Generate Requests
+    print("Generating requests...")
+    requests = environment.generate_requests_from_data(
+        parquet_path=parquet_file,
+        n_requests=5,
+        augment_location=False
+    )
 
+    # 5. Create Agent
+    print("Initializing MyCustomWhiteAgent...")
+    white_agent = MyCustomWhiteAgent(
+        agent_name="MyCustomAgent_v1"
+    )
+
+    # 6. Run Evaluation
+    print("Running evaluation...")
+    results = environment.run_evaluation(
+        white_agent=white_agent,
+        requests=requests,
+        verbose=True
+    )
+
+    # 7. Show Results
+    print("\n" + "="*80)
+    print("EVALUATION RESULTS")
+    print("="*80)
+    summary = results['evaluation_summary']
+    print(f"Agent: {results['agent_name']}")
+    print(f"Score: {summary['overall_score']:.2f}/100")
+    print(f"Parsing Accuracy: {summary['parsing_metrics']['origin_zone_accuracy']*100:.1f}%")
+    print(f"Net Revenue: ${summary['routing_metrics']['net_revenue']:.2f}")
+    print("\nCheck logs/custom_agent.log for details.")
 
 if __name__ == "__main__":
     main()
