@@ -13,14 +13,10 @@ This project provides a complete environment to simulate, develop, and evaluate 
 
 ## ⚡️ Quick Start (Local Simulation)
 
-1. **Setup Environment**:
+1. **Install dependencies**:
 
    ```bash
-   # Sync dependencies using uv
-   uv sync
-
-   # Activate virtual environment
-   source .venv/bin/activate
+   pip install -r requirements.txt
    ```
 
 2. **Configure Credentials**:
@@ -74,9 +70,22 @@ To deploy your agents on the **AgentBeats v2 Platform** (`v2.agentbeats.org`) fo
 
 ### Prerequisites
 
-- Ensure your environment is set up and activated (`uv sync` && `source .venv/bin/activate`).
+### Prerequisites
+
 - Install `ngrok` and authenticate.
 - Ensure two ngrok domains are reserved (e.g., `green.your-domain` and `white.your-domain`).
+
+### Step 0: Setup Environment
+
+Before running controllers, ensure dependencies are synced and the environment is active:
+
+```bash
+# Sync dependencies using uv
+uv sync
+
+# Activate virtual environment
+source .venv/bin/activate
+```
 
 ### Step 1: Start Tunnels
 
